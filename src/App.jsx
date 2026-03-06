@@ -1,6 +1,4 @@
-import { useState } from "react";
-
-// ─── DATA ────────────────────────────────────────────────────────────────────
+import { useState, useEffect } from "react";
 
 const ACTIVITY_CATEGORIES = [
   { label: "All", emoji: "🌍" },
@@ -101,10 +99,21 @@ const MOCK_EVENTS = [
   { id: 8, title: "Jazz & Wine Evening", type: "Live Music", emoji: "🎸", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 2, maxSize: 6, members: ["Maya", "Ben"], time: "Fri, 8PM", location: "Ronnie Scott's, Soho", vibe: "Relaxed & sophisticated", color: "#f43f5e", category: "Culture" },
 ];
 
-// ─── COMPONENT ────────────────────────────────────────────────────────────────
+// custom hook for back button
+function useBackButton(callback) {
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handler = () => {
+      window.history.pushState(null, "", window.location.href);
+      callback();
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, [callback]);
+}
 
 export default function App() {
-  const [screen, setScreen] = useState("explore"); // explore | create | profile | event | profileView
+  const [screen, setScreen] = useState("explore");
   const [events, setEvents] = useState(MOCK_EVENTS);
   const [users] = useState(MOCK_USERS);
   const [filterCat, setFilterCat] = useState("All");
@@ -117,11 +126,36 @@ export default function App() {
   const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
   const [activityFilter, setActivityFilter] = useState("All");
 
+  const navigateTo = (newScreen, opts = {}) => {
+    window.history.pushState({ screen: newScreen }, "", window.location.href);
+    setScreen(newScreen);
+    if (opts.event !== undefined) setSelectedEvent(opts.event);
+    if (opts.user !== undefined) setViewingUser(opts.user);
+    if (opts.step !== undefined) setCreateStep(opts.step);
+  };
+
+  useEffect(() => {
+    window.history.pushState({ screen: "explore" }, "", window.location.href);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      const current = screen;
+      if (current === "event") { setScreen("explore"); setSelectedEvent(null); }
+      else if (current === "create") { setScreen("explore"); setCreateStep(1); }
+      else if (current === "profile") { setScreen("explore"); }
+      else if (current === "profileView") { setScreen("event"); }
+      else { window.history.pushState(null, "", window.location.href); }
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, [screen]);
+
   const ME = {
     id: "me", name: myName || "You", username: myName ? myName.toLowerCase().replace(" ", "") : "you",
     avatar: myName ? myName[0].toUpperCase() : "?",
     bio: "Ready for anything 🌍",
-    location: "London, UK",
+    location: "Sofia, BG",
     followers: 0, following: 0,
     gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     photos: [],
@@ -208,10 +242,9 @@ export default function App() {
         ::-webkit-scrollbar { width: 0; }
       `}</style>
 
-      {/* ── EXPLORE ── */}
+      {/* EXPLORE */}
       {screen === "explore" && (
         <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
-          {/* Header */}
           <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>Explore</h1>
@@ -223,14 +256,13 @@ export default function App() {
                   ✓ Joined
                 </div>
               )}
-              <div className="avatar-ring btn" onClick={() => setScreen("profile")} style={{
+              <div className="avatar-ring btn" onClick={() => navigateTo("profile")} style={{
                 width: 40, height: 40, background: ME.gradient, color: "#fff", fontSize: 15,
                 boxShadow: "0 0 0 2px #f8f5f0, 0 0 0 4px #1a1209",
               }}>{ME.avatar}</div>
             </div>
           </div>
 
-          {/* Category filter */}
           <div style={{ overflowX: "auto", padding: "16px 20px 0", display: "flex", gap: 8 }}>
             {ACTIVITY_CATEGORIES.map(cat => (
               <button key={cat.label} className="tab-btn" onClick={() => setFilterCat(cat.label)} style={{
@@ -243,14 +275,11 @@ export default function App() {
             ))}
           </div>
 
-          {/* Event cards */}
           <div style={{ padding: "16px 20px 0" }}>
             {filteredEvents.map((event, i) => (
               <div key={event.id} className={`card shadow-sm btn stagger-${Math.min(i + 1, 4)}`}
-                onClick={() => { setSelectedEvent(event); setScreen("event"); }}
+                onClick={() => navigateTo("event", { event })}
                 style={{ padding: 20, marginBottom: 14, cursor: "pointer" }}>
-
-                {/* Top row */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                     <div style={{
@@ -270,15 +299,11 @@ export default function App() {
                     {event.emoji} {event.type}
                   </span>
                 </div>
-
-                {/* Meta chips */}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
                   <span className="chip">🕐 {event.time}</span>
                   <span className="chip">📍 {event.location}</span>
                   {event.vibe && <span className="chip">✨ {event.vibe}</span>}
                 </div>
-
-                {/* Squad + bar */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ display: "flex" }}>
@@ -310,14 +335,12 @@ export default function App() {
         </div>
       )}
 
-      {/* ── EVENT DETAIL ── */}
+      {/* EVENT DETAIL */}
       {screen === "event" && selectedEvent && (
         <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
-          <div style={{ padding: "20px 20px 0", display: "flex", gap: 12, alignItems: "center" }}>
-            <button className="btn card shadow-sm" onClick={() => setScreen("explore")} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
+          <div style={{ padding: "20px 20px 0" }}>
+            <button className="btn card shadow-sm" onClick={() => navigateTo("explore", { event: null })} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
           </div>
-
-          {/* Hero */}
           <div style={{ margin: "16px 20px 0", borderRadius: 24, padding: 28, background: `linear-gradient(135deg, ${selectedEvent.color}18, ${selectedEvent.color}06)`, border: `1.5px solid ${selectedEvent.color}25` }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>{selectedEvent.emoji}</div>
             <h2 className="display" style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>{selectedEvent.title}</h2>
@@ -329,17 +352,15 @@ export default function App() {
             </div>
           </div>
 
-          {/* Host */}
-          <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 18, display: "flex", alignItems: "center", gap: 14 }}
-            onClick={() => { setViewingUser(users.find(u => u.id === selectedEvent.hostId) || null); setScreen("profileView"); }}>
-            <div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18, cursor: "pointer" }}>{selectedEvent.hostAvatar}</div>
+          <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 18, display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
+            onClick={() => { const u = users.find(u => u.id === selectedEvent.hostId); navigateTo("profileView", { user: u || null }); }}>
+            <div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18 }}>{selectedEvent.hostAvatar}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700 }}>{selectedEvent.host}</div>
               <div style={{ fontSize: 13, color: "#8a7a6a" }}>View profile →</div>
             </div>
           </div>
 
-          {/* Squad */}
           <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
               <span className="display" style={{ fontWeight: 700, fontSize: 17 }}>Squad ({selectedEvent.groupSize}/{selectedEvent.maxSize})</span>
@@ -358,7 +379,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Join */}
           <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 20 }}>
             <p className="display" style={{ fontWeight: 700, marginBottom: 14, fontSize: 17 }}>Join this squad</p>
             <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
@@ -372,12 +392,12 @@ export default function App() {
               background: myName ? "#1a1209" : "#e8e3db",
               color: myName ? "#f8f5f0" : "#a89f92",
               letterSpacing: 0.3,
-            }}>{myName ? `Join Squad 🙌` : "Enter your name to join"}</button>
+            }}>{myName ? "Join Squad 🙌" : "Enter your name to join"}</button>
           </div>
         </div>
       )}
 
-      {/* ── CREATE ── */}
+      {/* CREATE */}
       {screen === "create" && (
         <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
           <div style={{ padding: "24px 20px 0" }}>
@@ -389,9 +409,7 @@ export default function App() {
               ))}
             </div>
           </div>
-
           <div style={{ padding: "24px 20px 0" }}>
-            {/* Step 1 - Pick activity */}
             {createStep === 1 && (
               <div className="fade-in">
                 <p style={{ fontWeight: 600, marginBottom: 16, color: "#5a4e40" }}>What are you planning?</p>
@@ -421,8 +439,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
-            {/* Step 2 - Details */}
             {createStep === 2 && (
               <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {selectedType && (
@@ -440,7 +456,7 @@ export default function App() {
                 </div>
                 <div>
                   <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Event title *</label>
-                  <input value={createForm.title} onChange={e => setCreateForm({ ...createForm, title: e.target.value })} placeholder={`e.g. Morning Run – Hyde Park`} />
+                  <input value={createForm.title} onChange={e => setCreateForm({ ...createForm, title: e.target.value })} placeholder="e.g. Morning Run – Sofia" />
                 </div>
                 <div>
                   <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>When</label>
@@ -461,8 +477,6 @@ export default function App() {
                 }}>Continue →</button>
               </div>
             )}
-
-            {/* Step 3 - Squad settings */}
             {createStep === 3 && (
               <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div className="card shadow-sm" style={{ padding: 18, background: "#f8f5f0" }}>
@@ -496,13 +510,12 @@ export default function App() {
         </div>
       )}
 
-      {/* ── MY PROFILE ── */}
+      {/* PROFILE */}
       {(screen === "profile" || screen === "profileView") && (
         <ProfileScreen
           user={screen === "profileView" && viewingUser ? viewingUser : ME}
           isMe={screen === "profile"}
-          onBack={() => setScreen(screen === "profileView" ? "event" : "explore")}
-          onViewUser={(u) => { setViewingUser(u); setScreen("profileView"); }}
+          onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")}
           myName={myName}
           setMyName={setMyName}
           joined={joined}
@@ -510,7 +523,7 @@ export default function App() {
         />
       )}
 
-      {/* ── BOTTOM NAV ── */}
+      {/* BOTTOM NAV */}
       {(screen === "explore" || screen === "create" || screen === "profile") && (
         <div className="bottom-nav">
           {[
@@ -518,7 +531,7 @@ export default function App() {
             { id: "create", emoji: "＋", label: "Create", big: true },
             { id: "profile", emoji: "👤", label: "Profile" },
           ].map(nav => (
-            <button key={nav.id} className="btn" onClick={() => { setScreen(nav.id); if (nav.id === "create") { setCreateStep(1); } }} style={{
+            <button key={nav.id} className="btn" onClick={() => navigateTo(nav.id, { step: 1 })} style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
               background: nav.big ? "#1a1209" : "none", border: "none",
               borderRadius: nav.big ? "50%" : 0, width: nav.big ? 52 : "auto", height: nav.big ? 52 : "auto",
@@ -535,8 +548,6 @@ export default function App() {
   );
 }
 
-// ─── PROFILE SCREEN ───────────────────────────────────────────────────────────
-
 function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }) {
   const [profileTab, setProfileTab] = useState("photos");
   const myEvents = events ? events.filter(e => e.hostId === "me" || (isMe && joined && e.id === joined.id)) : [];
@@ -548,11 +559,9 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
           <button className="btn card shadow-sm" onClick={onBack} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
         </div>
       )}
-
-      {/* Cover + Avatar */}
       <div style={{ margin: isMe ? "20px 20px 0" : "16px 20px 0", position: "relative" }}>
         <div style={{ height: 120, borderRadius: 20, background: user.gradient, opacity: 0.9 }} />
-        <div style={{ position: "absolute", bottom: -28, left: 20, display: "flex", alignItems: "flex-end", gap: 14 }}>
+        <div style={{ position: "absolute", bottom: -28, left: 20 }}>
           <div className="avatar-ring" style={{
             width: 72, height: 72, background: user.gradient, color: "#fff",
             fontSize: 28, fontWeight: 800, border: "4px solid #f8f5f0",
@@ -560,8 +569,6 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
           }}>{user.avatar}</div>
         </div>
       </div>
-
-      {/* Info */}
       <div style={{ padding: "40px 20px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
@@ -572,21 +579,17 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
             <div style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
           )}
         </div>
-
         {isMe && !myName && (
           <div className="card" style={{ marginTop: 12, padding: 14, background: "#fff9ed", border: "1px solid #fcd34d" }}>
             <p style={{ fontSize: 13, color: "#92400e", marginBottom: 8 }}>Set your name to personalize your profile</p>
             <input placeholder="Your name" value={myName} onChange={e => setMyName(e.target.value)} style={{ fontSize: 14 }} />
           </div>
         )}
-
         <p style={{ marginTop: 12, fontSize: 15, lineHeight: 1.6, color: "#3a2e20" }}>{user.bio}</p>
         <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
           <span className="chip">📍 {user.location}</span>
           {user.activityHistory.length > 0 && <span className="chip">🎯 {user.activityHistory.length} activities</span>}
         </div>
-
-        {/* Stats */}
         <div style={{ display: "flex", gap: 32, marginTop: 18 }}>
           {[["Activities", user.activityHistory.length], ["Followers", user.followers], ["Following", user.following]].map(([label, val]) => (
             <div key={label} style={{ textAlign: "center" }}>
@@ -595,9 +598,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
             </div>
           ))}
         </div>
-
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, marginTop: 24, borderBottom: "2px solid #e8e3db", paddingBottom: 0 }}>
+        <div style={{ display: "flex", gap: 4, marginTop: 24, borderBottom: "2px solid #e8e3db" }}>
           {[["photos", "📸 Photos"], ["history", "📅 History"]].map(([id, label]) => (
             <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
               padding: "10px 18px", borderRadius: "10px 10px 0 0", fontSize: 14, fontWeight: 600,
@@ -607,18 +608,12 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
             }}>{label}</button>
           ))}
         </div>
-
-        {/* Photos grid */}
         {profileTab === "photos" && (
           <div className="fade-in" style={{ marginTop: 16 }}>
             {user.photos.length > 0 ? (
               <div className="photo-grid">
-                {user.photos.map((ph, i) => (
-                  <div key={i} className="photo-cell">{ph}</div>
-                ))}
-                {isMe && (
-                  <div className="photo-cell" style={{ background: "#f0ece5", color: "#8a7a6a", fontSize: 24 }}>+</div>
-                )}
+                {user.photos.map((ph, i) => <div key={i} className="photo-cell">{ph}</div>)}
+                {isMe && <div className="photo-cell" style={{ background: "#f0ece5", color: "#8a7a6a", fontSize: 24 }}>+</div>}
               </div>
             ) : (
               <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
@@ -629,18 +624,12 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
             )}
           </div>
         )}
-
-        {/* Activity history */}
         {profileTab === "history" && (
           <div className="fade-in" style={{ marginTop: 16 }}>
             {user.activityHistory.length > 0 || myEvents.length > 0 ? (
               [...user.activityHistory, ...(isMe ? myEvents.map(e => ({ title: e.title, type: e.type, emoji: e.emoji, date: e.time, attendees: e.groupSize })) : [])].map((act, i) => (
                 <div key={i} className="card shadow-sm" style={{ padding: 16, marginBottom: 10, display: "flex", gap: 14, alignItems: "center" }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: 14, fontSize: 22,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "#f0ece5",
-                  }}>{act.emoji}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0ece5" }}>{act.emoji}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{act.title}</div>
                     <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{act.date} · {act.attendees} people</div>
