@@ -176,6 +176,29 @@ useEffect(() => {
 }, []);
 
 
+
+useEffect(() => {
+  if (!user) return;
+  const loadEvents = async () => {
+    const { data, error } = await supabase.from("events").select("*").order("created_at", { ascending: false });
+    if (error) { console.error(error); return; }
+    const formatted = data.map(e => ({
+      ...e,
+      groupSize: e.group_size,
+      maxSize: e.max_size,
+      host: e.host_name,
+      hostId: e.host_id,
+      hostAvatar: e.host_name ? e.host_name[0].toUpperCase() : "?",
+      hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    }));
+    setEvents(formatted);
+  };
+  loadEvents();
+}, [user]);
+
+
+
+
   const ME = {
     id: "me", name: myName || "You", username: myName ? myName.toLowerCase().replace(" ", "") : "you",
     avatar: myName ? myName[0].toUpperCase() : "?",
@@ -190,10 +213,17 @@ useEffect(() => {
   const filteredEvents = events.filter(e => filterCat === "All" || e.category === filterCat);
   const spotsLeft = e => e.maxSize - e.groupSize;
 
-  const handleJoin = (event) => {
+  const handleJoin = async (event) => {
   if (!myName) return;
+  const updatedMembers = [...event.members, myName];
+  const updatedSize = event.groupSize + parseInt(myGroupSize);
+  const { error } = await supabase.from("events").update({
+    members: updatedMembers,
+    group_size: updatedSize,
+  }).eq("id", event.id);
+  if (error) { console.error(error); return; }
   const updated = events.map(e => e.id === event.id
-    ? { ...e, groupSize: e.groupSize + parseInt(myGroupSize), members: [...e.members, myName] }
+    ? { ...e, groupSize: updatedSize, members: updatedMembers }
     : e);
   setEvents(updated);
   setJoined(updated.find(e => e.id === event.id));
@@ -203,33 +233,35 @@ useEffect(() => {
   setTimeout(() => setToast(null), 3000);
 };
 
-  const handleCreate = () => {
-    if (!createForm.title || !myName || !createForm.type) return;
-    const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
-    const newEvent = {
-      id: events.length + 1,
-      title: createForm.title,
-      type: createForm.type,
-      emoji: typeData.emoji,
-      host: myName || "You",
-      hostId: "me",
-      hostAvatar: myName ? myName[0].toUpperCase() : "?",
-      hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-      groupSize: parseInt(myGroupSize) || 1,
-      maxSize: parseInt(createForm.maxSize) || 8,
-      members: [myName || "You"],
-      time: createForm.time || "TBD",
-      location: createForm.location || "TBD",
-      vibe: createForm.vibe || "",
-      color: typeData.color,
-      category: typeData.category,
-    };
-    setEvents([newEvent, ...events]);
-    setJoined(newEvent);
-    setCreateForm({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
-    setCreateStep(1);
-    setScreen("explore");
+  const handleCreate = async () => {
+  if (!createForm.title || !myName || !createForm.type) return;
+  const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
+  const newEvent = {
+    title: createForm.title,
+    type: createForm.type,
+    emoji: typeData.emoji,
+    category: typeData.category,
+    color: typeData.color,
+    host_id: user.id,
+    host_name: myName,
+    time: createForm.time || "TBD",
+    location: createForm.location || "TBD",
+    vibe: createForm.vibe || "",
+    group_size: parseInt(myGroupSize) || 1,
+    max_size: parseInt(createForm.maxSize) || 8,
+    members: [myName],
   };
+  const { data, error } = await supabase.from("events").insert(newEvent).select().single();
+  if (error) { console.error(error); return; }
+  setEvents([{ ...data, groupSize: data.group_size, maxSize: data.max_size, host: data.host_name, hostId: data.host_id, hostAvatar: myName[0].toUpperCase(), hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)" }, ...events]);
+  setJoined(data);
+  setCreateForm({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
+  setCreateStep(1);
+  setScreen("explore");
+  setToast(`Event created! 🎉`);
+  setTimeout(() => setToast(null), 3000);
+};
+
 
   const selectedType = ACTIVITY_TYPES.find(t => t.label === createForm.type);
 
