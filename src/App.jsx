@@ -125,6 +125,7 @@ export default function App() {
   const [createStep, setCreateStep] = useState(1);
   const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
   const [activityFilter, setActivityFilter] = useState("All");
+  const [toast, setToast] = useState(null);
 
   const navigateTo = (newScreen, opts = {}) => {
     window.history.pushState({ screen: newScreen }, "", window.location.href);
@@ -166,15 +167,17 @@ export default function App() {
   const spotsLeft = e => e.maxSize - e.groupSize;
 
   const handleJoin = (event) => {
-    if (!myName) return;
-    const updated = events.map(e => e.id === event.id
-      ? { ...e, groupSize: e.groupSize + parseInt(myGroupSize), members: [...e.members, myName] }
-      : e);
-    setEvents(updated);
-    setJoined(updated.find(e => e.id === event.id));
-    setScreen("explore");
-    setSelectedEvent(null);
-  };
+  if (!myName) return;
+  const updated = events.map(e => e.id === event.id
+    ? { ...e, groupSize: e.groupSize + parseInt(myGroupSize), members: [...e.members, myName] }
+    : e);
+  setEvents(updated);
+  setJoined(updated.find(e => e.id === event.id));
+  setScreen("explore");
+  setSelectedEvent(null);
+  setToast(`You joined "${event.title}" 🙌`);
+  setTimeout(() => setToast(null), 3000);
+};
 
   const handleCreate = () => {
     if (!createForm.title || !myName || !createForm.type) return;
@@ -522,7 +525,16 @@ export default function App() {
           events={events}
         />
       )}
-
+{toast && (
+  <div style={{
+    position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
+    background: "#1a1209", color: "#f8f5f0", padding: "14px 24px",
+    borderRadius: 100, fontSize: 14, fontWeight: 600, zIndex: 999,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+    animation: "fadeIn 0.3s ease",
+    whiteSpace: "nowrap",
+  }}>{toast}</div>
+)}
       {/* BOTTOM NAV */}
       {(screen === "explore" || screen === "create" || screen === "profile") && (
         <div className="bottom-nav">
