@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { supabase } from "./supabase";
+import Auth from "./Auth";
+
 
 const ACTIVITY_CATEGORIES = [
   { label: "All", emoji: "🌍" },
@@ -99,6 +102,8 @@ const MOCK_EVENTS = [
   { id: 8, title: "Jazz & Wine Evening", type: "Live Music", emoji: "🎸", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 2, maxSize: 6, members: ["Maya", "Ben"], time: "Fri, 8PM", location: "Ronnie Scott's, Soho", vibe: "Relaxed & sophisticated", color: "#f43f5e", category: "Culture" },
 ];
 
+
+
 // custom hook for back button
 function useBackButton(callback) {
   useEffect(() => {
@@ -111,6 +116,7 @@ function useBackButton(callback) {
     return () => window.removeEventListener("popstate", handler);
   }, [callback]);
 }
+
 
 export default function App() {
   const [screen, setScreen] = useState("explore");
@@ -126,6 +132,8 @@ export default function App() {
   const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
   const [activityFilter, setActivityFilter] = useState("All");
   const [toast, setToast] = useState(null);
+  const [user, setUser] = useState(null);
+const [authReady, setAuthReady] = useState(false);
 
   const navigateTo = (newScreen, opts = {}) => {
     window.history.pushState({ screen: newScreen }, "", window.location.href);
@@ -151,6 +159,22 @@ export default function App() {
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
   }, [screen]);
+
+useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      setUser(session.user);
+      supabase.from("profiles").select("full_name").eq("id", session.user.id).single()
+        .then(({ data }) => { if (data) setMyName(data.full_name || ""); });
+    }
+    setAuthReady(true);
+  });
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user || null);
+  });
+  return () => subscription.unsubscribe();
+}, []);
+
 
   const ME = {
     id: "me", name: myName || "You", username: myName ? myName.toLowerCase().replace(" ", "") : "you",
@@ -208,6 +232,17 @@ export default function App() {
   };
 
   const selectedType = ACTIVITY_TYPES.find(t => t.label === createForm.type);
+
+if (!authReady) return (
+  <div style={{ minHeight: "100vh", background: "#f8f5f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ fontSize: 40 }}>🌍</div>
+  </div>
+);
+
+if (!user) return (
+  <Auth onLogin={(u, name) => { setUser(u); setMyName(name); }} />
+);
+
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f5f0", fontFamily: "'DM Sans', sans-serif", color: "#1a1209" }}>
