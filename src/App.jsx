@@ -190,12 +190,13 @@ useEffect(() => {
       hostId: e.host_id,
       hostAvatar: e.host_name ? e.host_name[0].toUpperCase() : "?",
       hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+      members: e.members || [],
+      memberNames: e.member_names || [],
     }));
     setEvents(formatted);
   };
   loadEvents();
 }, [user]);
-
 
 
 
@@ -214,16 +215,42 @@ useEffect(() => {
   const spotsLeft = e => e.maxSize - e.groupSize;
 
   const handleJoin = async (event) => {
-  if (!myName) return;
-  const updatedMembers = [...event.members, myName];
-  const updatedSize = event.groupSize + parseInt(myGroupSize);
+  if (!user) return;
+
+ console.log("user.id:", user.id);
+  console.log("event.members:", event.members);
+  console.log("already joined?", event.members.includes(user.id));
+
+
+  // Check if already joined using user ID
+  if (event.members.includes(user.id)) {
+    setToast("You're already in this squad 👀");
+    setTimeout(() => setToast(null), 3000);
+    return;
+  }
+
+  // Check if full
+  if (event.groupSize >= event.maxSize) {
+    setToast("This event is full 😔");
+    setTimeout(() => setToast(null), 3000);
+    return;
+  }
+
+  const updatedMembers = [...event.members, user.id];
+  const updatedSize = event.groupSize + 1;
+  const updatedNames = [...(event.memberNames || []), myName];
+
   const { error } = await supabase.from("events").update({
     members: updatedMembers,
+    member_names: updatedNames,
     group_size: updatedSize,
   }).eq("id", event.id);
-  if (error) { console.error(error); return; }
+
+if (error) { console.error(error); return; }
+
+
   const updated = events.map(e => e.id === event.id
-    ? { ...e, groupSize: updatedSize, members: updatedMembers }
+    ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames }
     : e);
   setEvents(updated);
   setJoined(updated.find(e => e.id === event.id));
@@ -233,7 +260,10 @@ useEffect(() => {
   setTimeout(() => setToast(null), 3000);
 };
 
-  const handleCreate = async () => {
+  
+
+
+const handleCreate = async () => {
   if (!createForm.title || !myName || !createForm.type) return;
   const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
   const newEvent = {
@@ -247,18 +277,30 @@ useEffect(() => {
     time: createForm.time || "TBD",
     location: createForm.location || "TBD",
     vibe: createForm.vibe || "",
-    group_size: parseInt(myGroupSize) || 1,
+    group_size: 1,
     max_size: parseInt(createForm.maxSize) || 8,
-    members: [myName],
+    members: [user.id],
+    member_names: [myName],
   };
   const { data, error } = await supabase.from("events").insert(newEvent).select().single();
   if (error) { console.error(error); return; }
-  setEvents([{ ...data, groupSize: data.group_size, maxSize: data.max_size, host: data.host_name, hostId: data.host_id, hostAvatar: myName[0].toUpperCase(), hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)" }, ...events]);
-  setJoined(data);
+  const formatted = {
+    ...data,
+    groupSize: data.group_size,
+    maxSize: data.max_size,
+    host: data.host_name,
+    hostId: data.host_id,
+    hostAvatar: myName[0].toUpperCase(),
+    hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    members: data.members || [],
+    memberNames: data.member_names || [],
+  };
+  setEvents([formatted, ...events]);
+  setJoined(formatted);
   setCreateForm({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
   setCreateStep(1);
   setScreen("explore");
-  setToast(`Event created! 🎉`);
+  setToast("Event created! 🎉");
   setTimeout(() => setToast(null), 3000);
 };
 
@@ -377,7 +419,7 @@ if (!user) return (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ display: "flex" }}>
-                      {event.members.slice(0, 5).map((m, j) => (
+                     {(event.memberNames || event.members || []).slice(0, 5).map((m, j) => (
                         <div key={j} className="avatar-ring" style={{
                           width: 26, height: 26, marginLeft: j > 0 ? -9 : 0, fontSize: 10,
                           background: event.color + "55", border: "2px solid #fff",
@@ -437,7 +479,7 @@ if (!user) return (
               <span style={{ fontSize: 13, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 600 }}>{spotsLeft(selectedEvent)} open</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-              {selectedEvent.members.map((m, i) => (
+{(selectedEvent.memberNames && selectedEvent.memberNames.length > 0 ? selectedEvent.memberNames : selectedEvent.members).map((m, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, background: "#f8f5f0", borderRadius: 100, padding: "5px 12px 5px 5px" }}>
                   <div className="avatar-ring" style={{ width: 26, height: 26, background: selectedEvent.color + "55", color: "#fff", fontSize: 10, fontWeight: 800 }}>{m[0].toUpperCase()}</div>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>{m}</span>
@@ -451,18 +493,38 @@ if (!user) return (
 
           <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 20 }}>
             <p className="display" style={{ fontWeight: 700, marginBottom: 14, fontSize: 17 }}>Join this squad</p>
-            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-              <input value={myName} onChange={e => setMyName(e.target.value)} placeholder="Your name" style={{ flex: 1 }} />
-              <select value={myGroupSize} onChange={e => setMyGroupSize(e.target.value)} style={{ width: 90, flexShrink: 0 }}>
-                {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} 👤{n>1?"s":""}</option>)}
-              </select>
-            </div>
-            <button className="btn" onClick={() => handleJoin(selectedEvent)} disabled={!myName} style={{
-              width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-              background: myName ? "#1a1209" : "#e8e3db",
-              color: myName ? "#f8f5f0" : "#a89f92",
-              letterSpacing: 0.3,
-            }}>{myName ? "Join Squad 🙌" : "Enter your name to join"}</button>
+     
+
+
+{selectedEvent.members.includes(user?.id) ? (
+  <div style={{
+    width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+    background: "#f0fdf4", color: "#10b981", letterSpacing: 0.3,
+    border: "2px solid #10b981", textAlign: "center",
+  }}>✓ You're in this squad</div>
+) : spotsLeft(selectedEvent) <= 0 ? (  <div>
+    <button disabled style={{
+      width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+      background: "#e8e3db", color: "#a89f92", letterSpacing: 0.3,
+      border: "none", marginBottom: 10,
+    }}>Event is Full 😔</button>
+    <button className="btn" onClick={() => {
+      setToast("We'll notify you if a spot opens up 🔔");
+      setTimeout(() => setToast(null), 3000);
+    }} style={{
+      width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+      background: "#fff", color: "#1a1209", letterSpacing: 0.3,
+      border: "2px solid #1a1209",
+    }}>🔔 Notify Me When a Spot Opens</button>
+  </div>
+) : (
+  <button className="btn" onClick={() => handleJoin(selectedEvent)} disabled={false} style={{
+    width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+   background: myName ? "#1a1209" : "#e8e3db",
+color: myName ? "#f8f5f0" : "#a89f92",
+    letterSpacing: 0.3,
+  }}>{myName ? "Join Squad 🙌" : "Enter your name to join"}</button>
+)}
           </div>
         </div>
       )}
