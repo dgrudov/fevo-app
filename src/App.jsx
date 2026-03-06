@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
-
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const ACTIVITY_CATEGORIES = [
   { label: "All", emoji: "🌍" },
@@ -129,8 +130,7 @@ export default function App() {
   const [myGroupSize, setMyGroupSize] = useState(1);
   const [joined, setJoined] = useState(null);
   const [createStep, setCreateStep] = useState(1);
-  const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
-  const [activityFilter, setActivityFilter] = useState("All");
+const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });  const [activityFilter, setActivityFilter] = useState("All");
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
 const [authReady, setAuthReady] = useState(false);
@@ -289,7 +289,7 @@ const handleLeave = async (event) => {
   setTimeout(() => setToast(null), 3000);
 };
 
-
+const formattedTime = createForm.time ? new Date(createForm.time).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "TBD";
 const handleCreate = async () => {
   if (!createForm.title || !myName || !createForm.type) return;
   const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
@@ -301,7 +301,7 @@ const handleCreate = async () => {
     color: typeData.color,
     host_id: user.id,
     host_name: myName,
-    time: createForm.time || "TBD",
+    time: formattedTime,
     location: createForm.location || "TBD",
     vibe: createForm.vibe || "",
     group_size: 1,
@@ -324,8 +324,7 @@ const handleCreate = async () => {
   };
   setEvents([formatted, ...events]);
   setJoined(formatted);
-  setCreateForm({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
-  setCreateStep(1);
+  setCreateForm({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });  setCreateStep(1);
   setScreen("explore");
   setToast("Event created! 🎉");
   setTimeout(() => setToast(null), 3000);
@@ -624,10 +623,25 @@ color: myName ? "#f8f5f0" : "#a89f92",
                   <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Event title *</label>
                   <input value={createForm.title} onChange={e => setCreateForm({ ...createForm, title: e.target.value })} placeholder="e.g. Morning Run – Sofia" />
                 </div>
-                <div>
-                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>When</label>
-                  <input value={createForm.time} onChange={e => setCreateForm({ ...createForm, time: e.target.value })} placeholder="e.g. Tomorrow, 7AM" />
-                </div>
+             <div>
+  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>When</label>
+  <DatePicker
+    selected={createForm.timeDate || null}
+    onChange={date => {
+      const formatted = date ? new Date(date).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      setCreateForm({ ...createForm, time: formatted, timeDate: date });
+    }}
+    showTimeSelect
+    timeFormat="HH:mm"
+    timeIntervals={15}
+    dateFormat="EEE d MMM, HH:mm"
+    minDate={new Date()}
+    placeholderText="Pick a date and time"
+    customInput={
+      <input style={{ width: "100%", cursor: "pointer" }} readOnly />
+    }
+  />
+</div>
                 <div>
                   <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Location</label>
                   <input value={createForm.location} onChange={e => setCreateForm({ ...createForm, location: e.target.value })} placeholder="Where are you meeting?" />
