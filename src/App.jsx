@@ -263,6 +263,33 @@ if (error) { console.error(error); return; }
   
 
 
+
+const handleLeave = async (event) => {
+  if (!user) return;
+  const updatedMembers = event.members.filter(m => m !== user.id);
+  const updatedNames = (event.memberNames || []).filter(m => m !== myName);
+  const updatedSize = event.groupSize - 1;
+
+  const { error } = await supabase.from("events").update({
+    members: updatedMembers,
+    member_names: updatedNames,
+    group_size: updatedSize,
+  }).eq("id", event.id);
+
+  if (error) { console.error(error); return; }
+
+  const updated = events.map(e => e.id === event.id
+    ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames }
+    : e);
+  setEvents(updated);
+  setJoined(null);
+  setScreen("explore");
+  setSelectedEvent(null);
+  setToast(`You left "${event.title}"`);
+  setTimeout(() => setToast(null), 3000);
+};
+
+
 const handleCreate = async () => {
   if (!createForm.title || !myName || !createForm.type) return;
   const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
@@ -497,11 +524,18 @@ if (!user) return (
 
 
 {selectedEvent.members.includes(user?.id) ? (
-  <div style={{
-    width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-    background: "#f0fdf4", color: "#10b981", letterSpacing: 0.3,
-    border: "2px solid #10b981", textAlign: "center",
-  }}>✓ You're in this squad</div>
+  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{
+      width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+      background: "#f0fdf4", color: "#10b981", letterSpacing: 0.3,
+      border: "2px solid #10b981", textAlign: "center",
+    }}>✓ You're in this squad</div>
+    <button className="btn" onClick={() => handleLeave(selectedEvent)} style={{
+      width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+      background: "#fff", color: "#ef4444", letterSpacing: 0.3,
+      border: "2px solid #ef4444",
+    }}>Leave Event</button>
+  </div>
 ) : spotsLeft(selectedEvent) <= 0 ? (  <div>
     <button disabled style={{
       width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
