@@ -496,6 +496,21 @@ if (!user) return (
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700 }}>{selectedEvent.host}</div>
               <div style={{ fontSize: 13, color: "#8a7a6a" }}>View profile →</div>
+              {selectedEvent.hostId === user?.id && (
+  <button className="btn" onClick={async () => {
+    const { error } = await supabase.from("events").delete().eq("id", selectedEvent.id);
+    if (error) { console.error(error); return; }
+    setEvents(events.filter(e => e.id !== selectedEvent.id));
+    setScreen("explore");
+    setSelectedEvent(null);
+    setToast("Event deleted");
+    setTimeout(() => setToast(null), 3000);
+  }} style={{
+    margin: "14px 20px 0", width: "calc(100% - 40px)", padding: 15, borderRadius: 14,
+    fontSize: 15, fontWeight: 700, background: "#fff", color: "#ef4444",
+    border: "2px solid #ef4444",
+  }}>Delete Event</button>
+)}
             </div>
           </div>
 
