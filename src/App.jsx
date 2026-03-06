@@ -622,9 +622,12 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
             <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{user.name}</h2>
             <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{user.username}</p>
           </div>
-          {isMe && (
-            <div style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
-          )}
+         {isMe && (
+  <div style={{ display: "flex", gap: 8 }}>
+    <div style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
+    <div onClick={async () => { await supabase.auth.signOut(); }} style={{ background: "#fee2e2", color: "#ef4444", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Log out</div>
+  </div>
+)}
         </div>
         {isMe && !myName && (
           <div className="card" style={{ marginTop: 12, padding: 14, background: "#fff9ed", border: "1px solid #fcd34d" }}>
