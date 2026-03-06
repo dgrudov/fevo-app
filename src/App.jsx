@@ -492,7 +492,7 @@ if (!user) return (
           </div>
 
           <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 18, display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
-            onClick={() => { const u = users.find(u => u.id === selectedEvent.hostId); navigateTo("profileView", { user: u || null }); }}>
+            onClick={() => { navigateTo("profileView", { user: { id: selectedEvent.hostId, name: selectedEvent.host } }); }}>
             <div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18 }}>{selectedEvent.hostAvatar}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700 }}>{selectedEvent.host}</div>
@@ -678,16 +678,16 @@ color: myName ? "#f8f5f0" : "#a89f92",
 
       {/* PROFILE */}
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen
-          user={screen === "profileView" && viewingUser ? viewingUser : ME}
-          isMe={screen === "profile"}
-          onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")}
-          myName={myName}
-          setMyName={setMyName}
-          joined={joined}
-          events={events}
-        />
-      )}
+  <ProfileScreen
+    user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }}
+    isMe={screen === "profile"}
+    onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")}
+    myName={myName}
+    setMyName={setMyName}
+    joined={joined}
+    events={events}
+  />
+)}
 {toast && (
   <div style={{
     position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
@@ -722,10 +722,21 @@ color: myName ? "#f8f5f0" : "#a89f92",
     </div>
   );
 }
-
 function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }) {
   const [profileTab, setProfileTab] = useState("photos");
-  const myEvents = events ? events.filter(e => e.hostId === "me" || (isMe && joined && e.id === joined.id)) : [];
+  const [profile, setProfile] = useState(null);
+  const myEvents = events ? events.filter(e => e.hostId === user?.id) : [];
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("profiles").select("*").eq("id", user.id).single()
+      .then(({ data }) => { if (data) setProfile(data); });
+  }, [user?.id]);
+
+  const displayName = isMe ? myName : (profile?.full_name || user?.name || "");
+  const displayBio = isMe ? "Ready for anything 🌍" : (profile?.bio || "");
+  const displayLocation = isMe ? "Sofia, BG" : (profile?.location || "");
+  const displayUsername = isMe ? (myName ? myName.toLowerCase().replace(/\s+/g, "") : "you") : (profile?.username || "");
 
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
@@ -735,41 +746,35 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
         </div>
       )}
       <div style={{ margin: isMe ? "20px 20px 0" : "16px 20px 0", position: "relative" }}>
-        <div style={{ height: 120, borderRadius: 20, background: user.gradient, opacity: 0.9 }} />
+        <div style={{ height: 120, borderRadius: 20, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", opacity: 0.9 }} />
         <div style={{ position: "absolute", bottom: -28, left: 20 }}>
           <div className="avatar-ring" style={{
-            width: 72, height: 72, background: user.gradient, color: "#fff",
+            width: 72, height: 72, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff",
             fontSize: 28, fontWeight: 800, border: "4px solid #f8f5f0",
             boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-          }}>{user.avatar}</div>
+          }}>{displayName ? displayName[0].toUpperCase() : "?"}</div>
         </div>
       </div>
       <div style={{ padding: "40px 20px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{user.name}</h2>
-            <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{user.username}</p>
+            <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{displayName}</h2>
+            <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{displayUsername}</p>
           </div>
-         {isMe && (
-  <div style={{ display: "flex", gap: 8 }}>
-    <div style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
-    <div onClick={async () => { await supabase.auth.signOut(); }} style={{ background: "#fee2e2", color: "#ef4444", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Log out</div>
-  </div>
-)}
+          {isMe && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
+              <div onClick={async () => { await supabase.auth.signOut(); }} style={{ background: "#fee2e2", color: "#ef4444", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Log out</div>
+            </div>
+          )}
         </div>
-        {isMe && !myName && (
-          <div className="card" style={{ marginTop: 12, padding: 14, background: "#fff9ed", border: "1px solid #fcd34d" }}>
-            <p style={{ fontSize: 13, color: "#92400e", marginBottom: 8 }}>Set your name to personalize your profile</p>
-            <input placeholder="Your name" value={myName} onChange={e => setMyName(e.target.value)} style={{ fontSize: 14 }} />
-          </div>
-        )}
-        <p style={{ marginTop: 12, fontSize: 15, lineHeight: 1.6, color: "#3a2e20" }}>{user.bio}</p>
+        <p style={{ marginTop: 12, fontSize: 15, lineHeight: 1.6, color: "#3a2e20" }}>{displayBio}</p>
         <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-          <span className="chip">📍 {user.location}</span>
-          {user.activityHistory.length > 0 && <span className="chip">🎯 {user.activityHistory.length} activities</span>}
+          {displayLocation && <span className="chip">📍 {displayLocation}</span>}
+          {myEvents.length > 0 && <span className="chip">🎯 {myEvents.length} activities</span>}
         </div>
         <div style={{ display: "flex", gap: 32, marginTop: 18 }}>
-          {[["Activities", user.activityHistory.length], ["Followers", user.followers], ["Following", user.following]].map(([label, val]) => (
+          {[["Activities", myEvents.length], ["Followers", 0], ["Following", 0]].map(([label, val]) => (
             <div key={label} style={{ textAlign: "center" }}>
               <div className="display" style={{ fontSize: 22, fontWeight: 700 }}>{val}</div>
               <div style={{ fontSize: 12, color: "#8a7a6a", fontWeight: 500 }}>{label}</div>
@@ -788,38 +793,31 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
         </div>
         {profileTab === "photos" && (
           <div className="fade-in" style={{ marginTop: 16 }}>
-            {user.photos.length > 0 ? (
-              <div className="photo-grid">
-                {user.photos.map((ph, i) => <div key={i} className="photo-cell">{ph}</div>)}
-                {isMe && <div className="photo-cell" style={{ background: "#f0ece5", color: "#8a7a6a", fontSize: 24 }}>+</div>}
-              </div>
-            ) : (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📸</div>
-                <p style={{ fontWeight: 600 }}>No photos yet</p>
-                <p style={{ fontSize: 13, marginTop: 4 }}>Photos from your activities will appear here</p>
-              </div>
-            )}
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📸</div>
+              <p style={{ fontWeight: 600 }}>No photos yet</p>
+              <p style={{ fontSize: 13, marginTop: 4 }}>Photos from activities will appear here</p>
+            </div>
           </div>
         )}
         {profileTab === "history" && (
           <div className="fade-in" style={{ marginTop: 16 }}>
-            {user.activityHistory.length > 0 || myEvents.length > 0 ? (
-              [...user.activityHistory, ...(isMe ? myEvents.map(e => ({ title: e.title, type: e.type, emoji: e.emoji, date: e.time, attendees: e.groupSize })) : [])].map((act, i) => (
+            {myEvents.length > 0 ? (
+              myEvents.map((e, i) => (
                 <div key={i} className="card shadow-sm" style={{ padding: 16, marginBottom: 10, display: "flex", gap: 14, alignItems: "center" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0ece5" }}>{act.emoji}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0ece5" }}>{e.emoji}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{act.title}</div>
-                    <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{act.date} · {act.attendees} people</div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</div>
+                    <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{e.time} · {e.groupSize} people</div>
                   </div>
-                  <span style={{ background: "#f0ece5", color: "#5a4e40", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{act.type}</span>
+                  <span style={{ background: "#f0ece5", color: "#5a4e40", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{e.type}</span>
                 </div>
               ))
             ) : (
               <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
                 <p style={{ fontWeight: 600 }}>No activities yet</p>
-                <p style={{ fontSize: 13, marginTop: 4 }}>Join or create an event to start your history</p>
+                <p style={{ fontSize: 13, marginTop: 4 }}>Create or join an event to start your history</p>
               </div>
             )}
           </div>
