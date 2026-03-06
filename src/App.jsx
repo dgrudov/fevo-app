@@ -1,0 +1,663 @@
+import { useState } from "react";
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const ACTIVITY_CATEGORIES = [
+  { label: "All", emoji: "🌍" },
+  { label: "Nightlife", emoji: "🪩" },
+  { label: "Outdoors", emoji: "🌿" },
+  { label: "Sports", emoji: "⚽" },
+  { label: "Beach", emoji: "🏖️" },
+  { label: "Food & Drink", emoji: "🍜" },
+  { label: "Culture", emoji: "🎨" },
+  { label: "Wellness", emoji: "🧘" },
+  { label: "Travel", emoji: "✈️" },
+];
+
+const ACTIVITY_TYPES = [
+  { label: "Disco / Club", emoji: "🪩", category: "Nightlife", color: "#FF3CAC" },
+  { label: "Bar Crawl", emoji: "🍻", category: "Nightlife", color: "#F7971E" },
+  { label: "Rooftop Bar", emoji: "🍹", category: "Nightlife", color: "#e96c2f" },
+  { label: "Karaoke", emoji: "🎤", category: "Nightlife", color: "#a78bfa" },
+  { label: "Live Music", emoji: "🎸", category: "Nightlife", color: "#f43f5e" },
+  { label: "Morning Run", emoji: "🏃", category: "Sports", color: "#10b981" },
+  { label: "Cycling", emoji: "🚴", category: "Sports", color: "#06b6d4" },
+  { label: "Football", emoji: "⚽", category: "Sports", color: "#22c55e" },
+  { label: "Basketball", emoji: "🏀", category: "Sports", color: "#f97316" },
+  { label: "Tennis", emoji: "🎾", category: "Sports", color: "#84cc16" },
+  { label: "Surf", emoji: "🏄", category: "Beach", color: "#0ea5e9" },
+  { label: "Beach Volleyball", emoji: "🏐", category: "Beach", color: "#f59e0b" },
+  { label: "Beach Day", emoji: "🏖️", category: "Beach", color: "#fbbf24" },
+  { label: "Swimming", emoji: "🏊", category: "Beach", color: "#38bdf8" },
+  { label: "Hiking", emoji: "🥾", category: "Outdoors", color: "#78716c" },
+  { label: "Camping", emoji: "⛺", category: "Outdoors", color: "#65a30d" },
+  { label: "Picnic", emoji: "🧺", category: "Outdoors", color: "#a3e635" },
+  { label: "Rock Climbing", emoji: "🧗", category: "Outdoors", color: "#d97706" },
+  { label: "Brunch", emoji: "🥞", category: "Food & Drink", color: "#fb923c" },
+  { label: "Dinner", emoji: "🍽️", category: "Food & Drink", color: "#e879f9" },
+  { label: "Food Tour", emoji: "🍜", category: "Food & Drink", color: "#f87171" },
+  { label: "Wine Tasting", emoji: "🍷", category: "Food & Drink", color: "#c084fc" },
+  { label: "Coffee Meetup", emoji: "☕", category: "Food & Drink", color: "#92400e" },
+  { label: "Museum", emoji: "🏛️", category: "Culture", color: "#818cf8" },
+  { label: "Art Gallery", emoji: "🎨", category: "Culture", color: "#f472b6" },
+  { label: "Theatre", emoji: "🎭", category: "Culture", color: "#a78bfa" },
+  { label: "Cinema", emoji: "🎬", category: "Culture", color: "#6366f1" },
+  { label: "Yoga", emoji: "🧘", category: "Wellness", color: "#2dd4bf" },
+  { label: "Meditation", emoji: "🪷", category: "Wellness", color: "#c084fc" },
+  { label: "Spa Day", emoji: "🛁", category: "Wellness", color: "#f9a8d4" },
+  { label: "Road Trip", emoji: "🚗", category: "Travel", color: "#34d399" },
+  { label: "Day Trip", emoji: "🗺️", category: "Travel", color: "#60a5fa" },
+  { label: "Weekend Away", emoji: "🧳", category: "Travel", color: "#a78bfa" },
+];
+
+const MOCK_USERS = [
+  {
+    id: "u1",
+    name: "Alex Rivera",
+    username: "alexrivera",
+    avatar: "AR",
+    bio: "Always down for a beach day or a late night out 🌊🪩 London based",
+    location: "London, UK",
+    followers: 312,
+    following: 189,
+    gradient: "linear-gradient(135deg, #FF3CAC, #784BA0)",
+    photos: ["🏖️", "🪩", "🏃", "🍜", "⛺", "🎸"],
+    activityHistory: [
+      { title: "Disco Night @ Fabric", type: "Disco / Club", emoji: "🪩", date: "Feb 28", attendees: 12 },
+      { title: "Sunrise Run – Hyde Park", type: "Morning Run", emoji: "🏃", date: "Feb 25", attendees: 6 },
+      { title: "Beach Day – Brighton", type: "Beach Day", emoji: "🏖️", date: "Feb 20", attendees: 9 },
+      { title: "Ramen Tour Soho", type: "Food Tour", emoji: "🍜", date: "Feb 14", attendees: 5 },
+      { title: "Lake District Hike", type: "Hiking", emoji: "🥾", date: "Jan 30", attendees: 8 },
+    ],
+  },
+  {
+    id: "u2",
+    name: "Maya Chen",
+    username: "mayachen",
+    avatar: "MC",
+    bio: "Yoga teacher & weekend adventurer 🧘 Coffee snob ☕ she/her",
+    location: "Barcelona, ES",
+    followers: 891,
+    following: 234,
+    gradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)",
+    photos: ["🧘", "☕", "🎨", "🥾", "🍷", "🏄"],
+    activityHistory: [
+      { title: "Sunrise Yoga – Barceloneta", type: "Yoga", emoji: "🧘", date: "Mar 1", attendees: 15 },
+      { title: "Surf Session – Costa Brava", type: "Surf", emoji: "🏄", date: "Feb 22", attendees: 7 },
+      { title: "Wine Tasting – Penedès", type: "Wine Tasting", emoji: "🍷", date: "Feb 18", attendees: 10 },
+      { title: "Art Gallery Hop", type: "Art Gallery", emoji: "🎨", date: "Feb 10", attendees: 4 },
+    ],
+  },
+];
+
+const MOCK_EVENTS = [
+  { id: 1, title: "Sunrise Coastal Run", type: "Morning Run", emoji: "🏃", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 3, maxSize: 10, members: ["Alex", "Jordan", "Sam"], time: "Tomorrow, 6:30AM", location: "Brighton Beach", vibe: "Easy pace, all welcome", color: "#10b981", category: "Sports" },
+  { id: 2, title: "Disco Night @ Fabric", type: "Disco / Club", emoji: "🪩", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 4, maxSize: 8, members: ["Maya", "Chris", "Lena", "Raj"], time: "Tonight, 11PM", location: "Fabric, London", vibe: "Deep House & Techno", color: "#FF3CAC", category: "Nightlife" },
+  { id: 3, title: "Bondi-style Beach Day", type: "Beach Day", emoji: "🏖️", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 5, maxSize: 12, members: ["Alex", "Zoe", "Tom", "Nina", "Luke"], time: "Sat, 11AM", location: "Brighton Beach", vibe: "Sun, snacks & volleyball", color: "#fbbf24", category: "Beach" },
+  { id: 4, title: "Morning Yoga Flow", type: "Yoga", emoji: "🧘", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 6, maxSize: 15, members: ["Maya", "Sara", "Ben", "Ines", "Paul", "Kira"], time: "Sun, 8AM", location: "Regent's Park", vibe: "All levels, bring a mat", color: "#2dd4bf", category: "Wellness" },
+  { id: 5, title: "Peak District Hike", type: "Hiking", emoji: "🥾", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 4, maxSize: 8, members: ["Alex", "Dan", "Fiona", "Mo"], time: "Sat, 9AM", location: "Peak District, UK", vibe: "Moderate trail, 12km", color: "#78716c", category: "Outdoors" },
+  { id: 6, title: "Sunday Brunch Crawl", type: "Brunch", emoji: "🥞", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 3, maxSize: 8, members: ["Maya", "Chris", "Ana"], time: "Sun, 10AM", location: "Shoreditch, London", vibe: "3 stops, unlimited coffee", color: "#fb923c", category: "Food & Drink" },
+  { id: 7, title: "5-a-side Football", type: "Football", emoji: "⚽", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 6, maxSize: 10, members: ["Alex", "Jordan", "Sam", "Raj", "Tom", "Lena"], time: "Tue, 7PM", location: "Powerleague, Shoreditch", vibe: "Casual, mixed ability", color: "#22c55e", category: "Sports" },
+  { id: 8, title: "Jazz & Wine Evening", type: "Live Music", emoji: "🎸", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 2, maxSize: 6, members: ["Maya", "Ben"], time: "Fri, 8PM", location: "Ronnie Scott's, Soho", vibe: "Relaxed & sophisticated", color: "#f43f5e", category: "Culture" },
+];
+
+// ─── COMPONENT ────────────────────────────────────────────────────────────────
+
+export default function App() {
+  const [screen, setScreen] = useState("explore"); // explore | create | profile | event | profileView
+  const [events, setEvents] = useState(MOCK_EVENTS);
+  const [users] = useState(MOCK_USERS);
+  const [filterCat, setFilterCat] = useState("All");
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
+  const [myName, setMyName] = useState("");
+  const [myGroupSize, setMyGroupSize] = useState(1);
+  const [joined, setJoined] = useState(null);
+  const [createStep, setCreateStep] = useState(1);
+  const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
+  const [activityFilter, setActivityFilter] = useState("All");
+
+  const ME = {
+    id: "me", name: myName || "You", username: myName ? myName.toLowerCase().replace(" ", "") : "you",
+    avatar: myName ? myName[0].toUpperCase() : "?",
+    bio: "Ready for anything 🌍",
+    location: "London, UK",
+    followers: 0, following: 0,
+    gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    photos: [],
+    activityHistory: joined ? [{ title: joined.title, type: joined.type, emoji: joined.emoji, date: "Today", attendees: joined.groupSize }] : [],
+  };
+
+  const filteredEvents = events.filter(e => filterCat === "All" || e.category === filterCat);
+  const spotsLeft = e => e.maxSize - e.groupSize;
+
+  const handleJoin = (event) => {
+    if (!myName) return;
+    const updated = events.map(e => e.id === event.id
+      ? { ...e, groupSize: e.groupSize + parseInt(myGroupSize), members: [...e.members, myName] }
+      : e);
+    setEvents(updated);
+    setJoined(updated.find(e => e.id === event.id));
+    setScreen("explore");
+    setSelectedEvent(null);
+  };
+
+  const handleCreate = () => {
+    if (!createForm.title || !myName || !createForm.type) return;
+    const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
+    const newEvent = {
+      id: events.length + 1,
+      title: createForm.title,
+      type: createForm.type,
+      emoji: typeData.emoji,
+      host: myName || "You",
+      hostId: "me",
+      hostAvatar: myName ? myName[0].toUpperCase() : "?",
+      hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+      groupSize: parseInt(myGroupSize) || 1,
+      maxSize: parseInt(createForm.maxSize) || 8,
+      members: [myName || "You"],
+      time: createForm.time || "TBD",
+      location: createForm.location || "TBD",
+      vibe: createForm.vibe || "",
+      color: typeData.color,
+      category: typeData.category,
+    };
+    setEvents([newEvent, ...events]);
+    setJoined(newEvent);
+    setCreateForm({ title: "", type: "", time: "", location: "", vibe: "", maxSize: 8, category: "" });
+    setCreateStep(1);
+    setScreen("explore");
+  };
+
+  const selectedType = ACTIVITY_TYPES.find(t => t.label === createForm.type);
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f8f5f0", fontFamily: "'DM Sans', sans-serif", color: "#1a1209" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .display { font-family: 'Clash Display', 'Georgia', serif; }
+        .btn { cursor: pointer; border: none; outline: none; transition: all 0.18s cubic-bezier(.4,0,.2,1); }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:active { transform: translateY(0) scale(0.98); }
+        .card { background: #fff; border-radius: 20px; border: 1px solid rgba(0,0,0,0.06); }
+        .shadow { box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
+        .shadow-sm { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        input, select, textarea { background: #faf9f7; border: 1.5px solid #e8e3db; color: #1a1209; border-radius: 12px; padding: 12px 16px; font-size: 15px; width: 100%; outline: none; font-family: 'DM Sans', sans-serif; transition: border 0.2s; }
+        input:focus, select:focus, textarea:focus { border-color: #1a1209; background: #fff; }
+        input::placeholder, textarea::placeholder { color: #a89f92; }
+        select option { background: #fff; }
+        .fade-in { animation: fadeIn 0.35s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(26,18,9,0.06); border-radius: 100px; padding: 5px 12px; font-size: 13px; color: #5a4e40; font-weight: 500; }
+        .avatar-ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+        .tab-btn { cursor: pointer; padding: 8px 18px; border-radius: 100px; font-size: 14px; font-weight: 600; transition: all 0.18s; border: none; }
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; border-radius: 12px; overflow: hidden; }
+        .photo-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 32px; background: rgba(26,18,9,0.04); cursor: pointer; transition: all 0.2s; }
+        .photo-cell:hover { background: rgba(26,18,9,0.08); transform: scale(1.05); }
+        .activity-type-btn { cursor: pointer; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 2px solid transparent; transition: all 0.18s; }
+        .activity-type-btn:hover { border-color: rgba(26,18,9,0.15); }
+        .progress { height: 5px; border-radius: 100px; background: rgba(26,18,9,0.08); overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 100px; transition: width 0.6s ease; }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(248,245,240,0.92); backdrop-filter: blur(20px); border-top: 1px solid rgba(0,0,0,0.08); padding: 12px 24px 20px; display: flex; justify-content: space-around; z-index: 200; }
+        .stagger-1 { animation: fadeIn 0.35s ease 0.05s both; }
+        .stagger-2 { animation: fadeIn 0.35s ease 0.1s both; }
+        .stagger-3 { animation: fadeIn 0.35s ease 0.15s both; }
+        .stagger-4 { animation: fadeIn 0.35s ease 0.2s both; }
+        ::-webkit-scrollbar { width: 0; }
+      `}</style>
+
+      {/* ── EXPLORE ── */}
+      {screen === "explore" && (
+        <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+          {/* Header */}
+          <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>Explore</h1>
+              <p style={{ color: "#8a7a6a", fontSize: 14, marginTop: 2 }}>{filteredEvents.length} events near you</p>
+            </div>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              {joined && (
+                <div style={{ background: "#10b981", borderRadius: 100, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                  ✓ Joined
+                </div>
+              )}
+              <div className="avatar-ring btn" onClick={() => setScreen("profile")} style={{
+                width: 40, height: 40, background: ME.gradient, color: "#fff", fontSize: 15,
+                boxShadow: "0 0 0 2px #f8f5f0, 0 0 0 4px #1a1209",
+              }}>{ME.avatar}</div>
+            </div>
+          </div>
+
+          {/* Category filter */}
+          <div style={{ overflowX: "auto", padding: "16px 20px 0", display: "flex", gap: 8 }}>
+            {ACTIVITY_CATEGORIES.map(cat => (
+              <button key={cat.label} className="tab-btn" onClick={() => setFilterCat(cat.label)} style={{
+                flexShrink: 0,
+                background: filterCat === cat.label ? "#1a1209" : "#fff",
+                color: filterCat === cat.label ? "#f8f5f0" : "#5a4e40",
+                border: filterCat === cat.label ? "none" : "1px solid #e8e3db",
+                fontSize: 13,
+              }}>{cat.emoji} {cat.label}</button>
+            ))}
+          </div>
+
+          {/* Event cards */}
+          <div style={{ padding: "16px 20px 0" }}>
+            {filteredEvents.map((event, i) => (
+              <div key={event.id} className={`card shadow-sm btn stagger-${Math.min(i + 1, 4)}`}
+                onClick={() => { setSelectedEvent(event); setScreen("event"); }}
+                style={{ padding: 20, marginBottom: 14, cursor: "pointer" }}>
+
+                {/* Top row */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{
+                      width: 52, height: 52, borderRadius: 16, fontSize: 26,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: `${event.color}18`, border: `1.5px solid ${event.color}30`,
+                    }}>{event.emoji}</div>
+                    <div>
+                      <div className="display" style={{ fontWeight: 600, fontSize: 17, letterSpacing: -0.3, lineHeight: 1.2 }}>{event.title}</div>
+                      <div style={{ color: "#8a7a6a", fontSize: 13, marginTop: 3, display: "flex", gap: 5, alignItems: "center" }}>
+                        <div className="avatar-ring" style={{ width: 18, height: 18, background: event.hostGradient, color: "#fff", fontSize: 8 }}>{event.hostAvatar}</div>
+                        {event.host}
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{ background: `${event.color}15`, color: event.color, borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                    {event.emoji} {event.type}
+                  </span>
+                </div>
+
+                {/* Meta chips */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                  <span className="chip">🕐 {event.time}</span>
+                  <span className="chip">📍 {event.location}</span>
+                  {event.vibe && <span className="chip">✨ {event.vibe}</span>}
+                </div>
+
+                {/* Squad + bar */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex" }}>
+                      {event.members.slice(0, 5).map((m, j) => (
+                        <div key={j} className="avatar-ring" style={{
+                          width: 26, height: 26, marginLeft: j > 0 ? -9 : 0, fontSize: 10,
+                          background: event.color + "55", border: "2px solid #fff",
+                          color: "#fff", zIndex: 5 - j, fontWeight: 700,
+                        }}>{m[0].toUpperCase()}</div>
+                      ))}
+                      {event.members.length > 5 && (
+                        <div className="avatar-ring" style={{ width: 26, height: 26, marginLeft: -9, fontSize: 9, background: "#e8e3db", border: "2px solid #fff", color: "#5a4e40", fontWeight: 700, zIndex: 0 }}>
+                          +{event.members.length - 5}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 13, color: "#8a7a6a" }}>{event.groupSize} joined</span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: spotsLeft(event) <= 2 ? "#ef4444" : "#10b981" }}>
+                    {spotsLeft(event)} spots left
+                  </span>
+                </div>
+                <div className="progress">
+                  <div className="progress-fill" style={{ width: `${(event.groupSize / event.maxSize) * 100}%`, background: event.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── EVENT DETAIL ── */}
+      {screen === "event" && selectedEvent && (
+        <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+          <div style={{ padding: "20px 20px 0", display: "flex", gap: 12, alignItems: "center" }}>
+            <button className="btn card shadow-sm" onClick={() => setScreen("explore")} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
+          </div>
+
+          {/* Hero */}
+          <div style={{ margin: "16px 20px 0", borderRadius: 24, padding: 28, background: `linear-gradient(135deg, ${selectedEvent.color}18, ${selectedEvent.color}06)`, border: `1.5px solid ${selectedEvent.color}25` }}>
+            <div style={{ fontSize: 56, marginBottom: 12 }}>{selectedEvent.emoji}</div>
+            <h2 className="display" style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>{selectedEvent.title}</h2>
+            <span style={{ background: `${selectedEvent.color}20`, color: selectedEvent.color, borderRadius: 100, padding: "5px 14px", fontSize: 13, fontWeight: 700 }}>{selectedEvent.type}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+              {[["🕐", selectedEvent.time], ["📍", selectedEvent.location], ["✨", selectedEvent.vibe], ["👑", `Hosted by ${selectedEvent.host}`]].filter(x => x[1]).map(([icon, val], i) => (
+                <div key={i} style={{ display: "flex", gap: 10, color: "#5a4e40", fontSize: 15 }}><span>{icon}</span><span>{val}</span></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Host */}
+          <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 18, display: "flex", alignItems: "center", gap: 14 }}
+            onClick={() => { setViewingUser(users.find(u => u.id === selectedEvent.hostId) || null); setScreen("profileView"); }}>
+            <div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18, cursor: "pointer" }}>{selectedEvent.hostAvatar}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700 }}>{selectedEvent.host}</div>
+              <div style={{ fontSize: 13, color: "#8a7a6a" }}>View profile →</div>
+            </div>
+          </div>
+
+          {/* Squad */}
+          <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+              <span className="display" style={{ fontWeight: 700, fontSize: 17 }}>Squad ({selectedEvent.groupSize}/{selectedEvent.maxSize})</span>
+              <span style={{ fontSize: 13, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 600 }}>{spotsLeft(selectedEvent)} open</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+              {selectedEvent.members.map((m, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, background: "#f8f5f0", borderRadius: 100, padding: "5px 12px 5px 5px" }}>
+                  <div className="avatar-ring" style={{ width: 26, height: 26, background: selectedEvent.color + "55", color: "#fff", fontSize: 10, fontWeight: 800 }}>{m[0].toUpperCase()}</div>
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>{m}</span>
+                </div>
+              ))}
+            </div>
+            <div className="progress">
+              <div className="progress-fill" style={{ width: `${(selectedEvent.groupSize / selectedEvent.maxSize) * 100}%`, background: selectedEvent.color }} />
+            </div>
+          </div>
+
+          {/* Join */}
+          <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 20 }}>
+            <p className="display" style={{ fontWeight: 700, marginBottom: 14, fontSize: 17 }}>Join this squad</p>
+            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+              <input value={myName} onChange={e => setMyName(e.target.value)} placeholder="Your name" style={{ flex: 1 }} />
+              <select value={myGroupSize} onChange={e => setMyGroupSize(e.target.value)} style={{ width: 90, flexShrink: 0 }}>
+                {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} 👤{n>1?"s":""}</option>)}
+              </select>
+            </div>
+            <button className="btn" onClick={() => handleJoin(selectedEvent)} disabled={!myName} style={{
+              width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+              background: myName ? "#1a1209" : "#e8e3db",
+              color: myName ? "#f8f5f0" : "#a89f92",
+              letterSpacing: 0.3,
+            }}>{myName ? `Join Squad 🙌` : "Enter your name to join"}</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── CREATE ── */}
+      {screen === "create" && (
+        <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+          <div style={{ padding: "24px 20px 0" }}>
+            <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>Create Event</h1>
+            <p style={{ color: "#8a7a6a", fontSize: 14, marginTop: 2 }}>Step {createStep} of 3</p>
+            <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+              {[1,2,3].map(s => (
+                <div key={s} style={{ flex: 1, height: 4, borderRadius: 100, background: s <= createStep ? "#1a1209" : "#e8e3db", transition: "background 0.3s" }} />
+              ))}
+            </div>
+          </div>
+
+          <div style={{ padding: "24px 20px 0" }}>
+            {/* Step 1 - Pick activity */}
+            {createStep === 1 && (
+              <div className="fade-in">
+                <p style={{ fontWeight: 600, marginBottom: 16, color: "#5a4e40" }}>What are you planning?</p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                  {ACTIVITY_CATEGORIES.slice(1).map(cat => (
+                    <button key={cat.label} className="tab-btn" onClick={() => setActivityFilter(cat.label)} style={{
+                      background: activityFilter === cat.label ? "#1a1209" : "#fff",
+                      color: activityFilter === cat.label ? "#f8f5f0" : "#5a4e40",
+                      border: activityFilter === cat.label ? "none" : "1px solid #e8e3db",
+                      fontSize: 12, padding: "6px 14px",
+                    }}>{cat.emoji} {cat.label}</button>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {ACTIVITY_TYPES.filter(t => activityFilter === "All" || t.category === activityFilter).map(type => (
+                    <div key={type.label} className="activity-type-btn" onClick={() => {
+                      setCreateForm({ ...createForm, type: type.label, category: type.category });
+                      setCreateStep(2);
+                    }} style={{
+                      background: createForm.type === type.label ? `${type.color}15` : "#fff",
+                      border: createForm.type === type.label ? `2px solid ${type.color}` : "2px solid #e8e3db",
+                    }}>
+                      <span style={{ fontSize: 26 }}>{type.emoji}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, textAlign: "center", lineHeight: 1.3, color: "#3a2e20" }}>{type.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 - Details */}
+            {createStep === 2 && (
+              <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {selectedType && (
+                  <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "14px 16px", background: `${selectedType.color}12`, borderRadius: 14, border: `1px solid ${selectedType.color}25`, marginBottom: 4 }}>
+                    <span style={{ fontSize: 28 }}>{selectedType.emoji}</span>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{selectedType.label}</div>
+                      <button className="btn" onClick={() => setCreateStep(1)} style={{ fontSize: 12, color: selectedType.color, background: "none", fontWeight: 600 }}>Change →</button>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Your name *</label>
+                  <input value={myName} onChange={e => setMyName(e.target.value)} placeholder="What's your name?" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Event title *</label>
+                  <input value={createForm.title} onChange={e => setCreateForm({ ...createForm, title: e.target.value })} placeholder={`e.g. Morning Run – Hyde Park`} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>When</label>
+                  <input value={createForm.time} onChange={e => setCreateForm({ ...createForm, time: e.target.value })} placeholder="e.g. Tomorrow, 7AM" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Location</label>
+                  <input value={createForm.location} onChange={e => setCreateForm({ ...createForm, location: e.target.value })} placeholder="Where are you meeting?" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Vibe / description</label>
+                  <textarea value={createForm.vibe} onChange={e => setCreateForm({ ...createForm, vibe: e.target.value })} placeholder="Describe the plan..." rows={2} style={{ resize: "none" }} />
+                </div>
+                <button className="btn" onClick={() => { if (createForm.title && myName) setCreateStep(3); }} style={{
+                  padding: 14, borderRadius: 14, fontSize: 15, fontWeight: 700,
+                  background: createForm.title && myName ? "#1a1209" : "#e8e3db",
+                  color: createForm.title && myName ? "#f8f5f0" : "#a89f92",
+                }}>Continue →</button>
+              </div>
+            )}
+
+            {/* Step 3 - Squad settings */}
+            {createStep === 3 && (
+              <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div className="card shadow-sm" style={{ padding: 18, background: "#f8f5f0" }}>
+                  <div className="display" style={{ fontWeight: 700, fontSize: 19, marginBottom: 4 }}>{createForm.title}</div>
+                  <div style={{ color: "#8a7a6a", fontSize: 14, display: "flex", gap: 10 }}>
+                    <span>🕐 {createForm.time || "TBD"}</span>
+                    <span>📍 {createForm.location || "TBD"}</span>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Your group size</label>
+                  <select value={myGroupSize} onChange={e => setMyGroupSize(e.target.value)}>
+                    {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} person{n > 1 ? "s" : ""}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Max group size (total)</label>
+                  <select value={createForm.maxSize} onChange={e => setCreateForm({ ...createForm, maxSize: e.target.value })}>
+                    {[4,6,8,10,12,15,20,30].map(n => <option key={n} value={n}>Up to {n} people</option>)}
+                  </select>
+                </div>
+                <button className="btn" onClick={handleCreate} style={{
+                  padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700,
+                  background: "linear-gradient(135deg, #1a1209, #3a2e20)",
+                  color: "#f8f5f0", letterSpacing: 0.3, marginTop: 4,
+                }}>Publish Event ✨</button>
+                <button className="btn" onClick={() => setCreateStep(2)} style={{ padding: 12, background: "none", fontSize: 14, color: "#8a7a6a" }}>← Back</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MY PROFILE ── */}
+      {(screen === "profile" || screen === "profileView") && (
+        <ProfileScreen
+          user={screen === "profileView" && viewingUser ? viewingUser : ME}
+          isMe={screen === "profile"}
+          onBack={() => setScreen(screen === "profileView" ? "event" : "explore")}
+          onViewUser={(u) => { setViewingUser(u); setScreen("profileView"); }}
+          myName={myName}
+          setMyName={setMyName}
+          joined={joined}
+          events={events}
+        />
+      )}
+
+      {/* ── BOTTOM NAV ── */}
+      {(screen === "explore" || screen === "create" || screen === "profile") && (
+        <div className="bottom-nav">
+          {[
+            { id: "explore", emoji: "🔍", label: "Explore" },
+            { id: "create", emoji: "＋", label: "Create", big: true },
+            { id: "profile", emoji: "👤", label: "Profile" },
+          ].map(nav => (
+            <button key={nav.id} className="btn" onClick={() => { setScreen(nav.id); if (nav.id === "create") { setCreateStep(1); } }} style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+              background: nav.big ? "#1a1209" : "none", border: "none",
+              borderRadius: nav.big ? "50%" : 0, width: nav.big ? 52 : "auto", height: nav.big ? 52 : "auto",
+              justifyContent: "center", marginTop: nav.big ? -16 : 0,
+              boxShadow: nav.big ? "0 4px 20px rgba(26,18,9,0.3)" : "none",
+            }}>
+              <span style={{ fontSize: nav.big ? 22 : 20, color: nav.big ? "#f8f5f0" : (screen === nav.id ? "#1a1209" : "#a89f92") }}>{nav.emoji}</span>
+              {!nav.big && <span style={{ fontSize: 11, fontWeight: 600, color: screen === nav.id ? "#1a1209" : "#a89f92" }}>{nav.label}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PROFILE SCREEN ───────────────────────────────────────────────────────────
+
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }) {
+  const [profileTab, setProfileTab] = useState("photos");
+  const myEvents = events ? events.filter(e => e.hostId === "me" || (isMe && joined && e.id === joined.id)) : [];
+
+  return (
+    <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+      {!isMe && (
+        <div style={{ padding: "20px 20px 0" }}>
+          <button className="btn card shadow-sm" onClick={onBack} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
+        </div>
+      )}
+
+      {/* Cover + Avatar */}
+      <div style={{ margin: isMe ? "20px 20px 0" : "16px 20px 0", position: "relative" }}>
+        <div style={{ height: 120, borderRadius: 20, background: user.gradient, opacity: 0.9 }} />
+        <div style={{ position: "absolute", bottom: -28, left: 20, display: "flex", alignItems: "flex-end", gap: 14 }}>
+          <div className="avatar-ring" style={{
+            width: 72, height: 72, background: user.gradient, color: "#fff",
+            fontSize: 28, fontWeight: 800, border: "4px solid #f8f5f0",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+          }}>{user.avatar}</div>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div style={{ padding: "40px 20px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{user.name}</h2>
+            <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{user.username}</p>
+          </div>
+          {isMe && (
+            <div style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
+          )}
+        </div>
+
+        {isMe && !myName && (
+          <div className="card" style={{ marginTop: 12, padding: 14, background: "#fff9ed", border: "1px solid #fcd34d" }}>
+            <p style={{ fontSize: 13, color: "#92400e", marginBottom: 8 }}>Set your name to personalize your profile</p>
+            <input placeholder="Your name" value={myName} onChange={e => setMyName(e.target.value)} style={{ fontSize: 14 }} />
+          </div>
+        )}
+
+        <p style={{ marginTop: 12, fontSize: 15, lineHeight: 1.6, color: "#3a2e20" }}>{user.bio}</p>
+        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+          <span className="chip">📍 {user.location}</span>
+          {user.activityHistory.length > 0 && <span className="chip">🎯 {user.activityHistory.length} activities</span>}
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "flex", gap: 32, marginTop: 18 }}>
+          {[["Activities", user.activityHistory.length], ["Followers", user.followers], ["Following", user.following]].map(([label, val]) => (
+            <div key={label} style={{ textAlign: "center" }}>
+              <div className="display" style={{ fontSize: 22, fontWeight: 700 }}>{val}</div>
+              <div style={{ fontSize: 12, color: "#8a7a6a", fontWeight: 500 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 4, marginTop: 24, borderBottom: "2px solid #e8e3db", paddingBottom: 0 }}>
+          {[["photos", "📸 Photos"], ["history", "📅 History"]].map(([id, label]) => (
+            <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
+              padding: "10px 18px", borderRadius: "10px 10px 0 0", fontSize: 14, fontWeight: 600,
+              background: profileTab === id ? "#1a1209" : "transparent",
+              color: profileTab === id ? "#f8f5f0" : "#8a7a6a",
+              border: "none", marginBottom: -2,
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {/* Photos grid */}
+        {profileTab === "photos" && (
+          <div className="fade-in" style={{ marginTop: 16 }}>
+            {user.photos.length > 0 ? (
+              <div className="photo-grid">
+                {user.photos.map((ph, i) => (
+                  <div key={i} className="photo-cell">{ph}</div>
+                ))}
+                {isMe && (
+                  <div className="photo-cell" style={{ background: "#f0ece5", color: "#8a7a6a", fontSize: 24 }}>+</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📸</div>
+                <p style={{ fontWeight: 600 }}>No photos yet</p>
+                <p style={{ fontSize: 13, marginTop: 4 }}>Photos from your activities will appear here</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Activity history */}
+        {profileTab === "history" && (
+          <div className="fade-in" style={{ marginTop: 16 }}>
+            {user.activityHistory.length > 0 || myEvents.length > 0 ? (
+              [...user.activityHistory, ...(isMe ? myEvents.map(e => ({ title: e.title, type: e.type, emoji: e.emoji, date: e.time, attendees: e.groupSize })) : [])].map((act, i) => (
+                <div key={i} className="card shadow-sm" style={{ padding: 16, marginBottom: 10, display: "flex", gap: 14, alignItems: "center" }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 14, fontSize: 22,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "#f0ece5",
+                  }}>{act.emoji}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{act.title}</div>
+                    <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{act.date} · {act.attendees} people</div>
+                  </div>
+                  <span style={{ background: "#f0ece5", color: "#5a4e40", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{act.type}</span>
+                </div>
+              ))
+            ) : (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
+                <p style={{ fontWeight: 600 }}>No activities yet</p>
+                <p style={{ fontSize: 13, marginTop: 4 }}>Join or create an event to start your history</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
