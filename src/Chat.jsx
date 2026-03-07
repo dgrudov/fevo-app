@@ -128,7 +128,7 @@ useEffect(() => {
                   <div style={{ width: 28, flexShrink: 0 }} />
                 )}
                 <div style={{
-                  maxWidth: "75%", padding: "10px 14px", wordBreak: "break-word", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  maxWidth: "75%", padding: "10px 14px", overflowWrap: "break-word", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                   background: isMe ? "#1a1209" : "#fff",
                   color: isMe ? "#f8f5f0" : "#1a1209",
                   fontSize: 15, lineHeight: 1.4,
