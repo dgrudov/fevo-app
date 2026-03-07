@@ -28,25 +28,11 @@ export default function Chat({ event, user, myName, onBack }) {
         table: "messages",
         filter: `event_id=eq.${event.id}`,
       }, (payload) => {
-        setMessages(prev => {
-          const exists = prev.some(m => 
-  m.id === payload.new.id || 
-  (m.content === payload.new.content && 
-   m.user_id === payload.new.user_id && 
-   Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 3000)
-);
-if (exists) {
-  return prev.map(m => 
-    (m.content === payload.new.content && 
-     m.user_id === payload.new.user_id &&
-     Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 3000)
-      ? { ...payload.new }
-      : m
-  );
-}
-return [...prev, payload.new];
-        });
-      })
+  setMessages(prev => {
+    if (prev.some(m => m.id === payload.new.id)) return prev;
+    return [...prev, payload.new];
+  });
+})
       .subscribe();
 
     return () => supabase.removeChannel(subscription);
@@ -68,29 +54,18 @@ return [...prev, payload.new];
     return () => textarea.removeEventListener("focus", handleFocus);
   }, []);
 
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
-    const tempId = Date.now();
-    const message = {
-      event_id: event.id,
-      user_id: user.id,
-      user_name: myName,
-      content: newMessage.trim(),
-      created_at: new Date().toISOString(),
-      id: tempId,
-    };
-    setNewMessage("");
-    setMessages(prev => [...prev, message]);
-    const { error } = await supabase.from("messages").insert({
-      event_id: message.event_id,
-      user_id: message.user_id,
-      user_name: message.user_name,
-      content: message.content,
-      created_at: message.created_at,
-    });
-    if (error) console.error(error);
-  };
-
+ const sendMessage = async () => {
+  if (!newMessage.trim()) return;
+  const content = newMessage.trim();
+  setNewMessage("");
+  const { error } = await supabase.from("messages").insert({
+    event_id: event.id,
+    user_id: user.id,
+    user_name: myName,
+    content: content,
+  });
+  if (error) console.error(error);
+};
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
