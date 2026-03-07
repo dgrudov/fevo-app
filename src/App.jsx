@@ -778,13 +778,42 @@ color: myName ? "#f8f5f0" : "#a89f92",
 function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const myEvents = events ? events.filter(e => e.hostId === user?.id) : [];
 
-  useEffect(() => {
-    if (!user?.id) return;
-    supabase.from("profiles").select("*").eq("id", user.id).single()
-      .then(({ data }) => { if (data) setProfile(data); });
-  }, [user?.id]);
+
+
+const uploadAvatar = async (e) => {
+  const file = e.target.files[0];
+  if (!file || !isMe) return;
+  setUploading(true);
+  const fileExt = file.name.split(".").pop();
+  const filePath = `${user.id}/avatar.${fileExt}`;
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(filePath, file, { upsert: true });
+  if (uploadError) { console.error(uploadError); setUploading(false); return; }
+  const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
+  const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+  await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id);
+  setAvatarUrl(publicUrl);
+  setUploading(false);
+};
+
+
+useEffect(() => {
+  if (!user?.id) return;
+  supabase.from("profiles").select("*").eq("id", user.id).single()
+    .then(({ data }) => {
+      if (data) {
+        setProfile(data);
+        if (data.avatar_url) setAvatarUrl(data.avatar_url);
+      }
+    });
+}, [user?.id]);
+
+
 
   const displayName = isMe ? myName : (profile?.full_name || user?.name || "");
   const displayBio = isMe ? "Ready for anything 🌍" : (profile?.bio || "");
@@ -800,12 +829,27 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
       )}
       <div style={{ margin: isMe ? "20px 20px 0" : "16px 20px 0", position: "relative" }}>
         <div style={{ height: 120, borderRadius: 20, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", opacity: 0.9 }} />
-        <div style={{ position: "absolute", bottom: -28, left: 20 }}>
-          <div className="avatar-ring" style={{
-            width: 72, height: 72, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff",
-            fontSize: 28, fontWeight: 800, border: "4px solid #f8f5f0",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-          }}>{displayName ? displayName[0].toUpperCase() : "?"}</div>
+        <div style={{ position: "absolute", bottom: -28, left: 20, position: "relative", display: "inline-block" }}>
+            <label style={{ cursor: isMe ? "pointer" : "default" }}>
+  {isMe && <input type="file" accept="image/*" onChange={uploadAvatar} style={{ display: "none" }} />}
+  <div className="avatar-ring" style={{
+    width: 72, height: 72, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff",
+    fontSize: 28, fontWeight: 800, border: "4px solid #f8f5f0",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.1)", overflow: "hidden", position: "relative",
+  }}>
+    {avatarUrl ? (
+      <img src={avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    ) : (
+      displayName ? displayName[0].toUpperCase() : "?"
+    )}
+    {uploading && (
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff" }}>...</div>
+    )}
+  </div>
+  {isMe && (
+    <div style={{ position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: "50%", background: "#1a1209", border: "2px solid #f8f5f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff" }}>+</div>
+  )}
+</label>
         </div>
       </div>
       <div style={{ padding: "40px 20px 0" }}>
