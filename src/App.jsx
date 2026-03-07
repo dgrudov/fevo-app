@@ -4,7 +4,7 @@ import Auth from "./Auth";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import LocationInput from "./LocationInput";
-
+import Chat from "./Chat";
 
 const ACTIVITY_CATEGORIES = [
   { label: "All", emoji: "🌍" },
@@ -156,6 +156,7 @@ const [authReady, setAuthReady] = useState(false);
       else if (current === "create") { setScreen("explore"); setCreateStep(1); }
       else if (current === "profile") { setScreen("explore"); }
       else if (current === "profileView") { setScreen("event"); }
+      else if (current === "chat") { setScreen("event"); }
       else { window.history.pushState(null, "", window.location.href); }
     };
     window.addEventListener("popstate", handler);
@@ -492,6 +493,12 @@ if (!user) return (
             </div>
           </div>
 
+<button className="btn" onClick={() => navigateTo("chat", { event: selectedEvent })} style={{
+  margin: "14px 20px 0", width: "calc(100% - 40px)", padding: 15, borderRadius: 14,
+  fontSize: 15, fontWeight: 700, background: "#fff", color: "#1a1209",
+  border: "2px solid #1a1209", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+}}>💬 Squad Chat</button>
+
           <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 18, display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
             onClick={() => { navigateTo("profileView", { user: { id: selectedEvent.hostId, name: selectedEvent.host } }); }}>
             <div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18 }}>{selectedEvent.hostAvatar}</div>
@@ -712,6 +719,17 @@ color: myName ? "#f8f5f0" : "#a89f92",
       )}
 
       {/* PROFILE */}
+
+      {screen === "chat" && selectedEvent && (
+  <Chat
+    event={selectedEvent}
+    user={user}
+    myName={myName}
+    onBack={() => navigateTo("event", { event: selectedEvent })}
+  />
+)}
+
+
       {(screen === "profile" || screen === "profileView") && (
   <ProfileScreen
     user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }}
@@ -859,5 +877,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
         )}
       </div>
     </div>
+
+    
   );
 }
