@@ -56,6 +56,20 @@ export default function Chat({ event, user, myName, onBack }) {
     created_at: new Date().toISOString(),
   };
   setNewMessage("");
+
+useEffect(() => {
+  const textarea = document.querySelector("textarea");
+  if (!textarea) return;
+  const handleFocus = () => {
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 300);
+  };
+  textarea.addEventListener("focus", handleFocus);
+  return () => textarea.removeEventListener("focus", handleFocus);
+}, []);
+
+
   // Add message immediately to local state
   setMessages(prev => [...prev, { ...message, id: Date.now() }]);
   const { error } = await supabase.from("messages").insert(message);
@@ -134,8 +148,8 @@ export default function Chat({ event, user, myName, onBack }) {
       </div>
 
       {/* Input */}
-      <div style={{ padding: "12px 20px 32px", background: "#fff", borderTop: "1px solid #e8e3db", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
-        <textarea
+        <div style={{ padding: "12px 20px env(safe-area-inset-bottom, 16px)", background: "#fff", borderTop: "1px solid #e8e3db", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
+            <textarea
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
           onKeyDown={handleKeyPress}
