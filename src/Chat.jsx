@@ -30,15 +30,21 @@ export default function Chat({ event, user, myName, onBack }) {
       }, (payload) => {
         setMessages(prev => {
           const exists = prev.some(m => 
-            m.id === payload.new.id || 
-            (m.content === payload.new.content && m.user_id === payload.new.user_id && Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 2000)
-          );
-          if (exists) return prev.map(m => 
-            (m.content === payload.new.content && m.user_id === payload.new.user_id) 
-              ? payload.new 
-              : m
-          );
-          return [...prev, payload.new];
+  m.id === payload.new.id || 
+  (m.content === payload.new.content && 
+   m.user_id === payload.new.user_id && 
+   Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 3000)
+);
+if (exists) {
+  return prev.map(m => 
+    (m.content === payload.new.content && 
+     m.user_id === payload.new.user_id &&
+     Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 3000)
+      ? { ...payload.new }
+      : m
+  );
+}
+return [...prev, payload.new];
         });
       })
       .subscribe();
