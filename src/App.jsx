@@ -3,6 +3,8 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import LocationInput from "./LocationInput";
+
 
 const ACTIVITY_CATEGORIES = [
   { label: "All", emoji: "🌍" },
@@ -658,9 +660,13 @@ color: myName ? "#f8f5f0" : "#a89f92",
   />
 </div>
                 <div>
-                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Location</label>
-                  <input value={createForm.location} onChange={e => setCreateForm({ ...createForm, location: e.target.value })} placeholder="Where are you meeting?" />
-                </div>
+  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Location</label>
+  <LocationInput
+    value={createForm.location}
+    onChange={val => setCreateForm({ ...createForm, location: val })}
+    placeholder="Search for a location"
+  />
+</div>
                 <div>
                   <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Vibe / description</label>
                   <textarea value={createForm.vibe} onChange={e => setCreateForm({ ...createForm, vibe: e.target.value })} placeholder="Describe the plan..." rows={2} style={{ resize: "none" }} />
