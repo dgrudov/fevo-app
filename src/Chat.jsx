@@ -99,8 +99,8 @@ useEffect(() => {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {loading && (
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+            {loading && (
           <div style={{ textAlign: "center", color: "#8a7a6a", marginTop: 40 }}>Loading messages...</div>
         )}
         {!loading && messages.length === 0 && (
@@ -128,7 +128,7 @@ useEffect(() => {
                   <div style={{ width: 28, flexShrink: 0 }} />
                 )}
                 <div style={{
-                  maxWidth: "70%", padding: "10px 14px", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  maxWidth: "75%", padding: "10px 14px", wordBreak: "break-word", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                   background: isMe ? "#1a1209" : "#fff",
                   color: isMe ? "#f8f5f0" : "#1a1209",
                   fontSize: 15, lineHeight: 1.4,
