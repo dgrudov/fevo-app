@@ -87,8 +87,8 @@ useEffect(() => {
   };
 
   return (
-<div style={{ maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", background: "#f8f5f0", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-          {/* Header */}
+<div style={{ maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", background: "#f8f5f0", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+              {/* Header */}
       <div style={{ padding: "20px 20px 16px", background: "#fff", borderBottom: "1px solid #e8e3db", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: 4 }}>←</button>
         <div style={{ width: 40, height: 40, borderRadius: 12, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", background: `${event.color}18` }}>{event.emoji}</div>
@@ -148,8 +148,8 @@ useEffect(() => {
       </div>
 
       {/* Input */}
-        <div style={{ padding: "12px 20px 16px", paddingBottom: "max(16px, env(safe-area-inset-bottom))", background: "#fff", borderTop: "1px solid #e8e3db", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
-                <textarea
+<div style={{ padding: "12px 20px 20px", background: "#fff", borderTop: "1px solid #e8e3db", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
+                    <textarea
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
           onKeyDown={handleKeyPress}
