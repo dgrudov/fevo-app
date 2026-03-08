@@ -141,6 +141,9 @@ const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", ti
 const [authReady, setAuthReady] = useState(false);
 const [joinRequests, setJoinRequests] = useState([]);
 const [myRequests, setMyRequests] = useState([]);
+const [now, setNow] = useState(new Date());
+
+
 
   const navigateTo = (newScreen, opts = {}) => {
     window.history.pushState({ screen: newScreen }, "", window.location.href);
@@ -153,6 +156,13 @@ const [myRequests, setMyRequests] = useState([]);
   useEffect(() => {
     window.history.pushState({ screen: "explore" }, "", window.location.href);
   }, []);
+
+
+useEffect(() => {
+  const timer = setInterval(() => setNow(new Date()), 1000);
+  return () => clearInterval(timer);
+}, []);
+
 
   useEffect(() => {
     const handler = () => {
@@ -329,8 +339,8 @@ await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_
   setTimeout(() => setToast(null), 3000);
 };
 
-const formattedTime = createForm.time ? new Date(createForm.time).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "TBD";
-const handleCreate = async () => {
+  const formattedTime = createForm.time ? new Date(createForm.time).toISOString() : "TBD";
+  const handleCreate = async () => {
   if (!createForm.title || !myName || !createForm.type) return;
   const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
   const newEvent = {
@@ -489,7 +499,7 @@ if (!user) return (
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                  <span className="chip">🕐 {event.time}</span>
+                  <span className="chip">🕐 {event.time && event.time !== "TBD" ? new Date(event.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : event.time}</span>
                   <span className="chip">📍 {event.location}</span>
                   {event.vibe && <span className="chip">✨ {event.vibe}</span>}
                 </div>
@@ -535,12 +545,40 @@ if (!user) return (
             <h2 className="display" style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>{selectedEvent.title}</h2>
             <span style={{ background: `${selectedEvent.color}20`, color: selectedEvent.color, borderRadius: 100, padding: "5px 14px", fontSize: 13, fontWeight: 700 }}>{selectedEvent.type}</span>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
-              {[["🕐", selectedEvent.time], ["📍", selectedEvent.location], ["✨", selectedEvent.vibe], ["👑", `Hosted by ${selectedEvent.host}`]].filter(x => x[1]).map(([icon, val], i) => (
+              {[["🕐", selectedEvent.time && selectedEvent.time !== "TBD" ? new Date(selectedEvent.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : selectedEvent.time], ["📍", selectedEvent.location], ["✨", selectedEvent.vibe], ["👑", `Hosted by ${selectedEvent.host}`]].filter(x => x[1]).map(([icon, val], i) => (
                 <div key={i} style={{ display: "flex", gap: 10, color: "#5a4e40", fontSize: 15 }}><span>{icon}</span><span>{val}</span></div>
               ))}
             </div>
           </div>
 
+         {(() => {
+  if (!selectedEvent.time) return null;
+  const eventTime = new Date(selectedEvent.time);
+  if (isNaN(eventTime.getTime())) return null;
+  const diff = eventTime - now;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  
+  if (diff <= 0 || diff > 24 * 60 * 60 * 1000) return null;
+  if (!selectedEvent.members.includes(user?.id) && selectedEvent.hostId !== user?.id) return null;
+
+  return (
+    <div style={{
+      margin: "16px 20px 0", padding: "14px 18px", borderRadius: 14,
+      background: "linear-gradient(135deg, #1a1209, #3d2e1e)",
+      color: "#f8f5f0", display: "flex", alignItems: "center", gap: 12,
+    }}>
+      <div style={{ fontSize: 24 }}>⏱</div>
+      <div>
+        <div style={{ fontSize: 12, color: "#a89f92", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Starting in</div>
+        <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'DM Sans', sans-serif", letterSpacing: -0.5 }}>
+          {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`}
+        </div>
+      </div>
+    </div>
+  );
+})()}
 <button className="btn" onClick={() => navigateTo("chat", { event: selectedEvent })} style={{
   margin: "14px 20px 0", width: "calc(100% - 40px)", padding: 15, borderRadius: 14,
   fontSize: 15, fontWeight: 700, background: "#fff", color: "#1a1209",
@@ -716,10 +754,9 @@ if (!user) return (
   <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>When</label>
   <DatePicker
     selected={createForm.timeDate || null}
-    onChange={date => {
-      const formatted = date ? new Date(date).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
-      setCreateForm({ ...createForm, time: formatted, timeDate: date });
-    }}
+   onChange={date => {
+  setCreateForm({ ...createForm, time: date ? date.toISOString() : "", timeDate: date });
+}}
     showTimeSelect
     timeFormat="HH:mm"
     timeIntervals={15}
