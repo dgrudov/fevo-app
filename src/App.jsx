@@ -6,6 +6,9 @@ import "react-datepicker/dist/react-datepicker.css";
 import LocationInput from "./LocationInput";
 import Chat from "./Chat";
 
+
+
+
 const ACTIVITY_CATEGORIES = [
   { label: "All", emoji: "🌍" },
   { label: "Nightlife", emoji: "🪩" },
@@ -136,6 +139,8 @@ const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", ti
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
 const [authReady, setAuthReady] = useState(false);
+const [joinRequests, setJoinRequests] = useState([]);
+const [myRequests, setMyRequests] = useState([]);
 
   const navigateTo = (newScreen, opts = {}) => {
     window.history.pushState({ screen: newScreen }, "", window.location.href);
@@ -157,6 +162,7 @@ const [authReady, setAuthReady] = useState(false);
       else if (current === "profile") { setScreen("explore"); }
       else if (current === "profileView") { setScreen("event"); }
       else if (current === "chat") { setScreen("event"); }
+      else if (current === "requests") { setScreen("explore"); }
       else { window.history.pushState(null, "", window.location.href); }
     };
     window.addEventListener("popstate", handler);
@@ -203,6 +209,22 @@ useEffect(() => {
 
 
 
+useEffect(() => {
+  if (!user) return;
+  const loadRequests = async () => {
+    const { data, error } = await supabase
+      .from("join_requests")
+      .select("*")
+      .eq("status", "pending");
+    if (error) { console.error(error); return; }
+    setJoinRequests(data || []);
+    setMyRequests(data.filter(r => r.user_id === user.id).map(r => r.event_id));
+  };
+  loadRequests();
+}, [user]);
+
+
+
   const ME = {
     id: "me", name: myName || "You", username: myName ? myName.toLowerCase().replace(" ", "") : "you",
     avatar: myName ? myName[0].toUpperCase() : "?",
@@ -220,50 +242,61 @@ useEffect(() => {
   const handleJoin = async (event) => {
   if (!user) return;
 
- console.log("user.id:", user.id);
-  console.log("event.members:", event.members);
-  console.log("already joined?", event.members.includes(user.id));
+if (event.hostId === user.id) {
+    const updatedMembers = [...event.members, user.id];
+    const updatedNames = [...(event.memberNames || []), myName];
+    const updatedSize = event.groupSize + 1;
+    await supabase.from("events").update({
+      members: updatedMembers,
+      member_names: updatedNames,
+      group_size: updatedSize,
+    }).eq("id", event.id);
+    setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
+    setSelectedEvent({ ...event, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames });
+    setToast("Welcome back to your event! 👑");
+    setTimeout(() => setToast(null), 3000);
+    return;
+  }
 
 
-  // Check if already joined using user ID
   if (event.members.includes(user.id)) {
     setToast("You're already in this squad 👀");
     setTimeout(() => setToast(null), 3000);
     return;
   }
 
-  // Check if full
   if (event.groupSize >= event.maxSize) {
     setToast("This event is full 😔");
     setTimeout(() => setToast(null), 3000);
     return;
   }
 
-  const updatedMembers = [...event.members, user.id];
-  const updatedSize = event.groupSize + 1;
-  const updatedNames = [...(event.memberNames || []), myName];
+  // Check if already requested
+  const { data: existing } = await supabase
+    .from("join_requests")
+    .select("*")
+    .eq("event_id", event.id)
+    .eq("user_id", user.id)
+    .single();
 
-  const { error } = await supabase.from("events").update({
-    members: updatedMembers,
-    member_names: updatedNames,
-    group_size: updatedSize,
-  }).eq("id", event.id);
+ if (existing) {
+    await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_id", user.id);
+    setMyRequests(myRequests.filter(id => id !== event.id));
+  }
+  const { error } = await supabase.from("join_requests").insert({
+    event_id: event.id,
+    user_id: user.id,
+    user_name: myName,
+    status: "pending",
+  });
 
-if (error) { console.error(error); return; }
+  if (error) { console.error(error); return; }
 
 
-  const updated = events.map(e => e.id === event.id
-    ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames }
-    : e);
-  setEvents(updated);
-  setJoined(updated.find(e => e.id === event.id));
-  setScreen("explore");
-  setSelectedEvent(null);
-  setToast(`You joined "${event.title}" 🙌`);
+  setMyRequests([...myRequests, event.id]);
+  setToast("Request sent! Waiting for approval 🙌");
   setTimeout(() => setToast(null), 3000);
 };
-
-  
 
 
 
@@ -281,6 +314,9 @@ const handleLeave = async (event) => {
 
   if (error) { console.error(error); return; }
 
+await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_id", user.id);
+
+
   const updated = events.map(e => e.id === event.id
     ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames }
     : e);
@@ -288,6 +324,7 @@ const handleLeave = async (event) => {
   setJoined(null);
   setScreen("explore");
   setSelectedEvent(null);
+  setMyRequests(myRequests.filter(id => id !== event.id));
   setToast(`You left "${event.title}"`);
   setTimeout(() => setToast(null), 3000);
 };
@@ -397,6 +434,17 @@ if (!user) return (
                   ✓ Joined
                 </div>
               )}
+
+{joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length > 0 && (
+  <button className="btn" onClick={() => navigateTo("requests")} style={{
+    background: "#ef4444", borderRadius: 100, padding: "6px 12px",
+    fontSize: 12, fontWeight: 700, color: "#fff", position: "relative",
+  }}>
+    🔔 {joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length} requests
+  </button>
+)}
+
+
               <div className="avatar-ring btn" onClick={() => navigateTo("profile")} style={{
                 width: 40, height: 40, background: ME.gradient, color: "#fff", fontSize: 15,
                 boxShadow: "0 0 0 2px #f8f5f0, 0 0 0 4px #1a1209",
@@ -545,7 +593,6 @@ if (!user) return (
             <p className="display" style={{ fontWeight: 700, marginBottom: 14, fontSize: 17 }}>Join this squad</p>
      
 
-
 {selectedEvent.members.includes(user?.id) ? (
   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
     <div style={{
@@ -559,7 +606,14 @@ if (!user) return (
       border: "2px solid #ef4444",
     }}>Leave Event</button>
   </div>
-) : spotsLeft(selectedEvent) <= 0 ? (  <div>
+) : selectedEvent.hostId === user?.id && selectedEvent.members.includes(user?.id) ? (
+  <div style={{
+    width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+    background: "#f8f5f0", color: "#8a7a6a", letterSpacing: 0.3,
+    border: "2px solid #e8e3db", textAlign: "center",
+  }}>👑 You're the host</div>
+) : spotsLeft(selectedEvent) <= 0 ? (
+  <div>
     <button disabled style={{
       width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
       background: "#e8e3db", color: "#a89f92", letterSpacing: 0.3,
@@ -574,13 +628,24 @@ if (!user) return (
       border: "2px solid #1a1209",
     }}>🔔 Notify Me When a Spot Opens</button>
   </div>
-) : (
-  <button className="btn" onClick={() => handleJoin(selectedEvent)} disabled={false} style={{
+
+
+) : selectedEvent.hostId === user?.id ? (
+  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{
     width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-   background: myName ? "#1a1209" : "#e8e3db",
-color: myName ? "#f8f5f0" : "#a89f92",
-    letterSpacing: 0.3,
-  }}>{myName ? "Join Squad 🙌" : "Enter your name to join"}</button>
+    background: "#1a1209", color: "#f8f5f0", letterSpacing: 0.3,
+  }}>👑 Rejoin Your Event</button>
+  ) : myRequests.includes(selectedEvent.id) ? (
+  <div style={{
+    width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+    background: "#fff9ed", color: "#f59e0b", letterSpacing: 0.3,
+    border: "2px solid #f59e0b", textAlign: "center",
+  }}>⏳ Request Pending</div>
+) : (
+  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{
+    width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
+    background: "#1a1209", color: "#f8f5f0", letterSpacing: 0.3,
+  }}>Request to Join 🙌</button>
 )}
           </div>
         </div>
@@ -719,6 +784,76 @@ color: myName ? "#f8f5f0" : "#a89f92",
       )}
 
       {/* PROFILE */}
+
+{screen === "requests" && (
+  <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+    <div style={{ padding: "20px 20px 0" }}>
+      <button className="btn card shadow-sm" onClick={() => navigateTo("explore")} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
+    </div>
+    <div style={{ padding: "20px 20px 0" }}>
+      <h1 className="display" style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5 }}>Join Requests</h1>
+      <p style={{ color: "#8a7a6a", fontSize: 14, marginTop: 4 }}>People who want to join your events</p>
+    </div>
+    <div style={{ padding: "16px 20px 0" }}>
+      {joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#8a7a6a" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+          <p style={{ fontWeight: 600 }}>No pending requests</p>
+        </div>
+      ) : (
+        joinRequests
+          .filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id))
+          .map(request => {
+            const event = events.find(e => e.id === request.event_id);
+            return (
+              <div key={request.id} className="card shadow-sm" style={{ padding: 18, marginBottom: 12 }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
+                  <div className="avatar-ring" style={{ width: 44, height: 44, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", fontSize: 16, fontWeight: 700 }}>
+                    {request.user_name?.[0]?.toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{request.user_name}</div>
+                    <div style={{ fontSize: 13, color: "#8a7a6a" }}>wants to join {event?.emoji} {event?.title}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button className="btn" onClick={async () => {
+                    const updatedMembers = [...(event.members || []), request.user_id];
+                    const updatedNames = [...(event.memberNames || []), request.user_name];
+                    const updatedSize = event.groupSize + 1;
+                    await supabase.from("events").update({
+                      members: updatedMembers,
+                      member_names: updatedNames,
+                      group_size: updatedSize,
+                    }).eq("id", event.id);
+                    await supabase.from("join_requests").update({ status: "accepted" }).eq("id", request.id);
+                    setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
+                    setJoinRequests(joinRequests.filter(r => r.id !== request.id));
+                    setToast(`${request.user_name} joined the squad! 🎉`);
+                    setTimeout(() => setToast(null), 3000);
+                  }} style={{
+                    flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700,
+                    background: "#1a1209", color: "#f8f5f0", border: "none",
+                  }}>✓ Accept</button>
+                  <button className="btn" onClick={async () => {
+                    await supabase.from("join_requests").update({ status: "declined" }).eq("id", request.id);
+                    setJoinRequests(joinRequests.filter(r => r.id !== request.id));
+                    setToast(`Request declined`);
+                    setTimeout(() => setToast(null), 3000);
+                  }} style={{
+                    flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700,
+                    background: "#fff", color: "#ef4444", border: "2px solid #ef4444",
+                  }}>✕ Decline</button>
+                </div>
+              </div>
+            );
+          })
+      )}
+    </div>
+  </div>
+)}
+
+
 
       {screen === "chat" && selectedEvent && (
   <Chat
