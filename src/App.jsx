@@ -916,7 +916,8 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const myEvents = events ? events.filter(e => e.hostId === user?.id) : [];
-
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "" });
 
 
 const uploadAvatar = async (e) => {
@@ -937,6 +938,21 @@ const uploadAvatar = async (e) => {
 };
 
 
+const saveProfile = async () => {
+  const { error } = await supabase.from("profiles").update({
+    full_name: editForm.full_name,
+    bio: editForm.bio,
+    location: editForm.location,
+  }).eq("id", user.id);
+  if (error) { console.error(error); return; }
+  setProfile({ ...profile, ...editForm });
+  if (editForm.full_name && editForm.full_name !== myName) {
+    setMyName(editForm.full_name);
+  }
+  setEditing(false);
+};
+
+
 useEffect(() => {
   if (!user?.id) return;
   supabase.from("profiles").select("*").eq("id", user.id).single()
@@ -944,6 +960,11 @@ useEffect(() => {
       if (data) {
         setProfile(data);
         if (data.avatar_url) setAvatarUrl(data.avatar_url);
+        setEditForm({
+          full_name: data.full_name || "",
+          bio: data.bio || "",
+          location: data.location || "",
+        });
       }
     });
 }, [user?.id]);
@@ -987,18 +1008,50 @@ useEffect(() => {
 </label>
         </div>
       </div>
-      <div style={{ padding: "40px 20px 0" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{displayName}</h2>
-            <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{displayUsername}</p>
+     <div style={{ padding: "40px 20px 0" }}>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+    <div style={{ flex: 1 }}>
+      {editing ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input
+            value={editForm.full_name}
+            onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
+            placeholder="Your name"
+            style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+          />
+          <textarea
+            value={editForm.bio}
+            onChange={e => setEditForm({ ...editForm, bio: e.target.value })}
+            placeholder="Write a short bio..."
+            rows={3}
+            style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209", resize: "none" }}
+          />
+          <input
+            value={editForm.location}
+            onChange={e => setEditForm({ ...editForm, location: e.target.value })}
+            placeholder="Your city"
+            style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+          />
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn" onClick={saveProfile} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#1a1209", color: "#f8f5f0", border: "none" }}>Save</button>
+            <button className="btn" onClick={() => setEditing(false)} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#fff", color: "#1a1209", border: "2px solid #e8e3db" }}>Cancel</button>
           </div>
-          {isMe && (
-            <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
-              <div onClick={async () => { await supabase.auth.signOut(); }} style={{ background: "#fee2e2", color: "#ef4444", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Log out</div>
-            </div>
-          )}
+        </div>
+      ) : (
+        <div>
+          <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{profile?.full_name || displayName}</h2>
+          <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{displayUsername}</p>
+          {profile?.bio && <p style={{ fontSize: 14, color: "#5a4e40", marginTop: 6, lineHeight: 1.5 }}>{profile.bio}</p>}
+          {profile?.location && <p style={{ fontSize: 13, color: "#a89f92", marginTop: 4 }}>📍 {profile.location}</p>}
+        </div>
+      )}
+    </div>
+    {isMe && !editing && (
+      <div style={{ display: "flex", gap: 8 }}>
+        <div onClick={() => setEditing(true)} style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
+        <div onClick={async () => { await supabase.auth.signOut(); }} style={{ background: "#fee2e2", color: "#ef4444", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Log out</div>
+      </div>
+    )}
         </div>
         <p style={{ marginTop: 12, fontSize: 15, lineHeight: 1.6, color: "#3a2e20" }}>{displayBio}</p>
         <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
