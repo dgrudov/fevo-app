@@ -917,8 +917,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
   const [avatarUrl, setAvatarUrl] = useState(null);
   const myEvents = events ? events.filter(e => e.hostId === user?.id) : [];
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "" });
-
+const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "", age: "", instagram: "" });
 
 const uploadAvatar = async (e) => {
   const file = e.target.files[0];
@@ -940,10 +939,12 @@ const uploadAvatar = async (e) => {
 
 const saveProfile = async () => {
   const { error } = await supabase.from("profiles").update({
-    full_name: editForm.full_name,
-    bio: editForm.bio,
-    location: editForm.location,
-  }).eq("id", user.id);
+  full_name: editForm.full_name,
+  bio: editForm.bio,
+  location: editForm.location,
+  age: editForm.age ? parseInt(editForm.age) : null,
+  instagram: editForm.instagram,
+}).eq("id", user.id);
   if (error) { console.error(error); return; }
   setProfile({ ...profile, ...editForm });
   if (editForm.full_name && editForm.full_name !== myName) {
@@ -960,11 +961,13 @@ useEffect(() => {
       if (data) {
         setProfile(data);
         if (data.avatar_url) setAvatarUrl(data.avatar_url);
-        setEditForm({
-          full_name: data.full_name || "",
-          bio: data.bio || "",
-          location: data.location || "",
-        });
+       setEditForm({
+  full_name: data.full_name || "",
+  bio: data.bio || "",
+  location: data.location || "",
+  age: data.age || "",
+  instagram: data.instagram || "",
+});
       }
     });
 }, [user?.id]);
@@ -1032,6 +1035,21 @@ useEffect(() => {
             placeholder="Your city"
             style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
           />
+          <input
+  value={editForm.age}
+  onChange={e => setEditForm({ ...editForm, age: e.target.value })}
+  placeholder="Your age"
+  type="number"
+  min="16"
+  max="99"
+  style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+/>
+<input
+  value={editForm.instagram}
+  onChange={e => setEditForm({ ...editForm, instagram: e.target.value.replace("@", "") })}
+  placeholder="Instagram username (without @)"
+  style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+/>
           <div style={{ display: "flex", gap: 10 }}>
             <button className="btn" onClick={saveProfile} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#1a1209", color: "#f8f5f0", border: "none" }}>Save</button>
             <button className="btn" onClick={() => setEditing(false)} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#fff", color: "#1a1209", border: "2px solid #e8e3db" }}>Cancel</button>
@@ -1042,7 +1060,20 @@ useEffect(() => {
           <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{profile?.full_name || displayName}</h2>
           <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{displayUsername}</p>
           {profile?.bio && <p style={{ fontSize: 14, color: "#5a4e40", marginTop: 6, lineHeight: 1.5 }}>{profile.bio}</p>}
-          {profile?.location && <p style={{ fontSize: 13, color: "#a89f92", marginTop: 4 }}>📍 {profile.location}</p>}
+<div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
+  {profile?.location && <span style={{ fontSize: 13, color: "#a89f92" }}>📍 {profile.location}</span>}
+  {profile?.age && <span style={{ fontSize: 13, color: "#a89f92" }}>🎂 {profile.age} years old</span>}
+{profile?.instagram && (
+  <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#a89f92", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="#a89f92" strokeWidth="2" fill="none"/>
+      <circle cx="12" cy="12" r="4" stroke="#a89f92" strokeWidth="2" fill="none"/>
+      <circle cx="17.5" cy="6.5" r="1" fill="#a89f92"/>
+    </svg>
+    @{profile.instagram}
+  </a>
+)}
+</div>
         </div>
       )}
     </div>
