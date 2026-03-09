@@ -212,7 +212,13 @@ useEffect(() => {
       members: e.members || [],
       memberNames: e.member_names || [],
     }));
-    setEvents(formatted);
+const activeEvents = formatted.filter(e => {
+  if (!e.time || e.time === "TBD") return true;
+  const parsed = new Date(e.time);
+  if (isNaN(parsed.getTime())) return true; // old format events, keep them
+  return parsed > new Date();
+});
+setEvents(activeEvents);
   };
   loadEvents();
 }, [user]);
@@ -341,7 +347,7 @@ await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_
 
   const formattedTime = createForm.time ? new Date(createForm.time).toISOString() : "TBD";
   const handleCreate = async () => {
-  if (!createForm.title || !myName || !createForm.type) return;
+  if (!createForm.title || !myName || !createForm.type || !createForm.time || !createForm.location) return;
   const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
   const newEvent = {
     title: createForm.title,
@@ -808,13 +814,19 @@ if (!user) return (
                     {[4,6,8,10,12,15,20,30].map(n => <option key={n} value={n}>Up to {n} people</option>)}
                   </select>
                 </div>
-                <button className="btn" onClick={handleCreate} style={{
-                  padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700,
-                  background: "linear-gradient(135deg, #1a1209, #3a2e20)",
-                  color: "#f8f5f0", letterSpacing: 0.3, marginTop: 4,
-                }}>Publish Event ✨</button>
-                <button className="btn" onClick={() => setCreateStep(2)} style={{ padding: 12, background: "none", fontSize: 14, color: "#8a7a6a" }}>← Back</button>
-              </div>
+              {(!createForm.title || !createForm.time || !createForm.location) && (
+  <p style={{ textAlign: "center", fontSize: 13, color: "#a89f92", marginBottom: 8 }}>
+    {!createForm.title ? "Add a title to continue" : !createForm.time ? "Pick a date and time to continue" : "Add a location to continue"}
+  </p>
+)}
+<button className="btn" onClick={handleCreate} disabled={!createForm.title || !createForm.time || !createForm.location} style={{
+  padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700,
+  background: (!createForm.title || !createForm.time || !createForm.location) ? "#e8e3db" : "linear-gradient(135deg, #1a1209, #3a2e20)",
+  color: (!createForm.title || !createForm.time || !createForm.location) ? "#a89f92" : "#f8f5f0",
+  letterSpacing: 0.3, marginTop: 4, cursor: (!createForm.title || !createForm.time || !createForm.location) ? "not-allowed" : "pointer",
+}}>Publish Event ✨</button>
+<button className="btn" onClick={() => setCreateStep(2)} style={{ padding: 12, background: "none", fontSize: 14, color: "#8a7a6a" }}>← Back</button>
+</div>
             )}
           </div>
         </div>
