@@ -5,9 +5,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import LocationInput from "./LocationInput";
 import Chat from "./Chat";
-
-
-
+import RatingModal from "./RatingModal";
+import { sendNotification } from "./notificationHelper";
+import Notifications from "./Notifications";
 
 const ACTIVITY_CATEGORIES = [
   { label: "All", emoji: "🌍" },
@@ -135,13 +135,16 @@ export default function App() {
   const [myGroupSize, setMyGroupSize] = useState(1);
   const [joined, setJoined] = useState(null);
   const [createStep, setCreateStep] = useState(1);
-const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });  const [activityFilter, setActivityFilter] = useState("All");
+  const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });  const [activityFilter, setActivityFilter] = useState("All");
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
-const [authReady, setAuthReady] = useState(false);
-const [joinRequests, setJoinRequests] = useState([]);
-const [myRequests, setMyRequests] = useState([]);
-const [now, setNow] = useState(new Date());
+  const [authReady, setAuthReady] = useState(false);
+  const [joinRequests, setJoinRequests] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
+  const [now, setNow] = useState(new Date());
+  const [showRating, setShowRating] = useState(null); // holds the event to rate
+  const [unreadCount, setUnreadCount] = useState(0);
+
 
 
 
@@ -156,6 +159,23 @@ const [now, setNow] = useState(new Date());
   useEffect(() => {
     window.history.pushState({ screen: "explore" }, "", window.location.href);
   }, []);
+
+
+
+useEffect(() => {
+  if (!user) return;
+  const loadUnread = async () => {
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+    setUnreadCount(count || 0);
+  };
+  loadUnread();
+}, [user, screen]);
+
+
 
 
 useEffect(() => {
@@ -173,6 +193,7 @@ useEffect(() => {
       else if (current === "profileView") { setScreen("event"); }
       else if (current === "chat") { setScreen("event"); }
       else if (current === "requests") { setScreen("explore"); }
+      else if (current === "notifications") { setScreen("explore"); }
       else { window.history.pushState(null, "", window.location.href); }
     };
     window.addEventListener("popstate", handler);
@@ -198,28 +219,51 @@ useEffect(() => {
 
 useEffect(() => {
   if (!user) return;
-  const loadEvents = async () => {
-    const { data, error } = await supabase.from("events").select("*").order("created_at", { ascending: false });
-    if (error) { console.error(error); return; }
-    const formatted = data.map(e => ({
-      ...e,
-      groupSize: e.group_size,
-      maxSize: e.max_size,
-      host: e.host_name,
-      hostId: e.host_id,
-      hostAvatar: e.host_name ? e.host_name[0].toUpperCase() : "?",
-      hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-      members: e.members || [],
-      memberNames: e.member_names || [],
-    }));
-const activeEvents = formatted.filter(e => {
-  if (!e.time || e.time === "TBD") return true;
-  const parsed = new Date(e.time);
-  if (isNaN(parsed.getTime())) return true; // old format events, keep them
-  return parsed > new Date();
-});
-setEvents(activeEvents);
-  };
+ const loadEvents = async () => {
+  const { data, error } = await supabase.from("events").select("*").order("created_at", { ascending: false });
+  if (error) { console.error(error); return; }
+  const formatted = data.map(e => ({
+    ...e,
+    groupSize: e.group_size,
+    maxSize: e.max_size,
+    host: e.host_name,
+    hostId: e.host_id,
+    hostAvatar: e.host_name ? e.host_name[0].toUpperCase() : "?",
+    hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    members: e.members || [],
+    memberNames: e.member_names || [],
+  }));
+
+  // Check for unrated past events BEFORE filtering
+  if (user) {
+    const now = new Date();
+    const passedEvents = formatted.filter(e =>
+      e.time && e.time !== "TBD" &&
+      new Date(e.time) < now &&
+      e.members.includes(user.id) &&
+      e.members.length > 1
+    );
+    for (const event of passedEvents) {
+      const { data: existing } = await supabase
+        .from("ratings")
+        .select("id")
+        .eq("event_id", event.id)
+        .eq("rater_id", user.id);
+      if (existing && existing.length === 0) {
+        setShowRating(event);
+        break;
+      }
+    }
+  }
+
+  const activeEvents = formatted.filter(e => {
+    if (!e.time || e.time === "TBD") return true;
+    const parsed = new Date(e.time);
+    if (isNaN(parsed.getTime())) return true;
+    return parsed > new Date();
+  });
+  setEvents(activeEvents);
+};
   loadEvents();
 }, [user]);
 
@@ -309,6 +353,8 @@ if (event.hostId === user.id) {
   if (error) { console.error(error); return; }
 
 
+  console.log("sending notification to hostId:", event.hostId, "my id:", user.id);
+  await sendNotification(event.hostId, "join_request", "New join request 👥", `${myName} wants to join ${event.emoji} ${event.title}`, { event_id: event.id, user_id: user.id, user_name: myName });
   setMyRequests([...myRequests, event.id]);
   setToast("Request sent! Waiting for approval 🙌");
   setTimeout(() => setToast(null), 3000);
@@ -451,14 +497,20 @@ if (!user) return (
   </div>
 )}
 
-{joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length > 0 && (
-  <button className="btn" onClick={() => navigateTo("requests")} style={{
-    background: "#ef4444", borderRadius: 100, padding: "6px 12px",
-    fontSize: 12, fontWeight: 700, color: "#fff", position: "relative",
+<button className="btn" onClick={() => navigateTo("notifications")} style={{
+  background: "none", border: "none", cursor: "pointer", position: "relative", padding: 4,
+}}>
+  <div style={{ fontSize: 24 }}>🔔</div>
+{unreadCount > 0 && (
+  <div style={{
+    position: "absolute", top: -2, right: -2, width: 18, height: 18,
+    borderRadius: "50%", background: "#ef4444", color: "#fff",
+    fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
   }}>
-    🔔 {joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length} requests
-  </button>
+    {unreadCount}
+  </div>
 )}
+</button>
 
 
               <div className="avatar-ring btn" onClick={() => navigateTo("profile")} style={{
@@ -834,6 +886,14 @@ if (!user) return (
 
       {/* PROFILE */}
 
+
+{screen === "notifications" && (
+  <Notifications
+    user={user}
+    onBack={() => navigateTo("explore")}
+    onNavigate={(s) => navigateTo(s)}
+  />
+)}
 {screen === "requests" && (
   <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
     <div style={{ padding: "20px 20px 0" }}>
@@ -878,7 +938,10 @@ if (!user) return (
                     await supabase.from("join_requests").update({ status: "accepted" }).eq("id", request.id);
                     setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
                     setJoinRequests(joinRequests.filter(r => r.id !== request.id));
+                    setUnreadCount(prev => Math.max(0, prev - 1));
                     setToast(`${request.user_name} joined the squad! 🎉`);
+                    await sendNotification(request.user_id, "request_accepted", "Request accepted! 🎉", `You're now in the squad for ${event.emoji} ${event.title}`, { event_id: event.id });
+                    await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request");
                     setTimeout(() => setToast(null), 3000);
                   }} style={{
                     flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700,
@@ -886,7 +949,9 @@ if (!user) return (
                   }}>✓ Accept</button>
                   <button className="btn" onClick={async () => {
                     await supabase.from("join_requests").update({ status: "declined" }).eq("id", request.id);
+                    await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request");
                     setJoinRequests(joinRequests.filter(r => r.id !== request.id));
+                    setUnreadCount(prev => Math.max(0, prev - 1));
                     setToast(`Request declined`);
                     setTimeout(() => setToast(null), 3000);
                   }} style={{
@@ -925,6 +990,15 @@ if (!user) return (
     events={events}
   />
 )}
+
+{showRating && (
+  <RatingModal
+    event={showRating}
+    user={user}
+    onClose={() => setShowRating(null)}
+  />
+)}
+
 {toast && (
   <div style={{
     position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
@@ -1110,6 +1184,9 @@ useEffect(() => {
           <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{displayUsername}</p>
           {profile?.bio && <p style={{ fontSize: 14, color: "#5a4e40", marginTop: 6, lineHeight: 1.5 }}>{profile.bio}</p>}
 <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
+  {profile?.total_ratings > 0 && (
+  <span style={{ fontSize: 13, color: "#a89f92" }}>⭐ {profile.avg_rating} · {profile.total_ratings} {profile.total_ratings === 1 ? "rating" : "ratings"}</span>
+)}
   {profile?.location && <span style={{ fontSize: 13, color: "#a89f92" }}>📍 {profile.location}</span>}
   {profile?.age && <span style={{ fontSize: 13, color: "#a89f92" }}>🎂 {profile.age} years old</span>}
 {profile?.instagram && (
