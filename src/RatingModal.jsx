@@ -9,36 +9,29 @@ export default function RatingModal({ event, user, onClose }) {
     .map((id, i) => ({ id, name: event.memberNames[i] }))
     .filter(m => m.id !== user.id);
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    for (const member of membersToRate) {
-      const rating = ratings[member.id];
-      if (!rating) continue;
-      await supabase.from("ratings").insert({
-        event_id: event.id,
-        rater_id: user.id,
-        rated_id: member.id,
-        rating: rating,
-      });
-      // Update avg_rating and total_ratings on profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("avg_rating, total_ratings")
-        .eq("id", member.id)
-        .single();
-      if (profile) {
-        const newTotal = (profile.total_ratings || 0) + 1;
-        const newAvg = (((profile.avg_rating || 0) * (profile.total_ratings || 0)) + rating) / newTotal;
-        await supabase.from("profiles").update({
-          avg_rating: Math.round(newAvg * 100) / 100,
-          total_ratings: newTotal,
-        }).eq("id", member.id);
-      }
-    }
-    setSubmitting(false);
-    onClose();
-  };
+const handleSubmit = async () => {
+  setSubmitting(true);
+  for (const member of membersToRate) {
+    const rating = ratings[member.id];
+    if (!rating) continue;
+    
+    await supabase.from("ratings").insert({
+      event_id: event.id,
+      rater_id: user.id,
+      rated_id: member.id,
+      rating: rating,
+    });
 
+
+
+   await supabase.rpc("update_user_rating", {
+  target_user_id: member.id,
+  new_rating: rating,
+});
+  }
+  setSubmitting(false);
+  onClose();
+};
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.5)",
