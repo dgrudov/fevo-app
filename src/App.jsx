@@ -445,11 +445,11 @@ if (!user) return (
               <p style={{ color: "#8a7a6a", fontSize: 14, marginTop: 2 }}>{filteredEvents.length} events near you</p>
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              {joined && (
-                <div style={{ background: "#10b981", borderRadius: 100, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#fff" }}>
-                  ✓ Joined
-                </div>
-              )}
+             {joined && joined.members?.includes(user?.id) && (
+  <div style={{ background: "#10b981", borderRadius: 100, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#fff" }}>
+    ✓ Joined
+  </div>
+)}
 
 {joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length > 0 && (
   <button className="btn" onClick={() => navigateTo("requests")} style={{
