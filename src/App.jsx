@@ -320,7 +320,6 @@ if (event.hostId === user.id) {
   if (error) { console.error(error); return; }
 
 
-  console.log("sending notification to hostId:", event.hostId, "my id:", user.id);
   await sendNotification(event.hostId, "join_request", "New join request 👥", `${myName} wants to join ${event.emoji} ${event.title}`, { event_id: event.id, user_id: user.id, user_name: myName });
   setMyRequests([...myRequests, event.id]);
   setToast("Request sent! Waiting for approval 🙌");
