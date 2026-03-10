@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
-    export default function Notifications({ user, onBack, onNavigate, onRateSquad }) {
-    const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function Notifications({ user, onBack, onNavigate, onRateSquad }) {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -16,12 +16,11 @@ import { supabase } from "./supabase";
       if (error) { console.error(error); return; }
       setNotifications(data || []);
       setLoading(false);
-// Only mark non-actionable notifications as read
-await supabase.from("notifications").update({ read: true })
-  .eq("user_id", user.id)
-  .eq("read", false)
-  .neq("type", "join_request");
-
+      await supabase.from("notifications").update({ read: true })
+        .eq("user_id", user.id)
+        .eq("read", false)
+        .neq("type", "join_request")
+        .neq("type", "rate_squad");
     };
     load();
   }, [user]);
@@ -66,17 +65,21 @@ await supabase.from("notifications").update({ read: true })
             <p style={{ fontSize: 13, marginTop: 4 }}>When someone requests to join your event or you get rated you'll see it here</p>
           </div>
         )}
-       {notifications.map(n => (
-  <div key={n.id} className="card shadow-sm" onClick={() => {
-  if (n.type === "join_request") onNavigate("requests");
-  if (n.type === "request_accepted") onNavigate("explore");
-  if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
-}} style={{
-    padding: "16px 18px", marginBottom: 10,
-    background: n.read ? "#fff" : "#faf7f2",
-    borderLeft: n.read ? "none" : "3px solid #1a1209",
-    cursor: "pointer",
-  }}>
+        {notifications.map(n => (
+          <div key={n.id} className="card shadow-sm" onClick={async () => {
+            if (n.type === "join_request") onNavigate("requests");
+            if (n.type === "request_accepted") {
+              await supabase.from("notifications").delete().eq("id", n.id);
+              setNotifications(prev => prev.filter(notif => notif.id !== n.id));
+              onNavigate("explore");
+            }
+            if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
+          }} style={{
+            padding: "16px 18px", marginBottom: 10,
+            background: n.read ? "#fff" : "#faf7f2",
+            borderLeft: n.read ? "none" : "3px solid #1a1209",
+            cursor: "pointer",
+          }}>
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <div style={{ fontSize: 24, flexShrink: 0 }}>{getIcon(n.type)}</div>
               <div style={{ flex: 1 }}>

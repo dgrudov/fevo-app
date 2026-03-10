@@ -30,7 +30,7 @@ const handleSubmit = async () => {
 });
   }
   setSubmitting(false);
-  onClose();
+  onClose(true);
 };
   return (
     <div style={{
@@ -81,7 +81,7 @@ const handleSubmit = async () => {
         }}>
           {submitting ? "Submitting..." : "Submit Ratings"}
         </button>
-        <button onClick={onClose} style={{
+        <button onClick={() => onClose(false)} style={{
           width: "100%", padding: 12, borderRadius: 14, fontSize: 14, fontWeight: 600,
           background: "none", border: "none", color: "#8a7a6a", cursor: "pointer",
         }}>Skip for now</button>

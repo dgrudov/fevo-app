@@ -57,56 +57,6 @@ const ACTIVITY_TYPES = [
   { label: "Weekend Away", emoji: "🧳", category: "Travel", color: "#a78bfa" },
 ];
 
-const MOCK_USERS = [
-  {
-    id: "u1",
-    name: "Alex Rivera",
-    username: "alexrivera",
-    avatar: "AR",
-    bio: "Always down for a beach day or a late night out 🌊🪩 London based",
-    location: "London, UK",
-    followers: 312,
-    following: 189,
-    gradient: "linear-gradient(135deg, #FF3CAC, #784BA0)",
-    photos: ["🏖️", "🪩", "🏃", "🍜", "⛺", "🎸"],
-    activityHistory: [
-      { title: "Disco Night @ Fabric", type: "Disco / Club", emoji: "🪩", date: "Feb 28", attendees: 12 },
-      { title: "Sunrise Run – Hyde Park", type: "Morning Run", emoji: "🏃", date: "Feb 25", attendees: 6 },
-      { title: "Beach Day – Brighton", type: "Beach Day", emoji: "🏖️", date: "Feb 20", attendees: 9 },
-      { title: "Ramen Tour Soho", type: "Food Tour", emoji: "🍜", date: "Feb 14", attendees: 5 },
-      { title: "Lake District Hike", type: "Hiking", emoji: "🥾", date: "Jan 30", attendees: 8 },
-    ],
-  },
-  {
-    id: "u2",
-    name: "Maya Chen",
-    username: "mayachen",
-    avatar: "MC",
-    bio: "Yoga teacher & weekend adventurer 🧘 Coffee snob ☕ she/her",
-    location: "Barcelona, ES",
-    followers: 891,
-    following: 234,
-    gradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)",
-    photos: ["🧘", "☕", "🎨", "🥾", "🍷", "🏄"],
-    activityHistory: [
-      { title: "Sunrise Yoga – Barceloneta", type: "Yoga", emoji: "🧘", date: "Mar 1", attendees: 15 },
-      { title: "Surf Session – Costa Brava", type: "Surf", emoji: "🏄", date: "Feb 22", attendees: 7 },
-      { title: "Wine Tasting – Penedès", type: "Wine Tasting", emoji: "🍷", date: "Feb 18", attendees: 10 },
-      { title: "Art Gallery Hop", type: "Art Gallery", emoji: "🎨", date: "Feb 10", attendees: 4 },
-    ],
-  },
-];
-
-const MOCK_EVENTS = [
-  { id: 1, title: "Sunrise Coastal Run", type: "Morning Run", emoji: "🏃", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 3, maxSize: 10, members: ["Alex", "Jordan", "Sam"], time: "Tomorrow, 6:30AM", location: "Brighton Beach", vibe: "Easy pace, all welcome", color: "#10b981", category: "Sports" },
-  { id: 2, title: "Disco Night @ Fabric", type: "Disco / Club", emoji: "🪩", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 4, maxSize: 8, members: ["Maya", "Chris", "Lena", "Raj"], time: "Tonight, 11PM", location: "Fabric, London", vibe: "Deep House & Techno", color: "#FF3CAC", category: "Nightlife" },
-  { id: 3, title: "Bondi-style Beach Day", type: "Beach Day", emoji: "🏖️", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 5, maxSize: 12, members: ["Alex", "Zoe", "Tom", "Nina", "Luke"], time: "Sat, 11AM", location: "Brighton Beach", vibe: "Sun, snacks & volleyball", color: "#fbbf24", category: "Beach" },
-  { id: 4, title: "Morning Yoga Flow", type: "Yoga", emoji: "🧘", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 6, maxSize: 15, members: ["Maya", "Sara", "Ben", "Ines", "Paul", "Kira"], time: "Sun, 8AM", location: "Regent's Park", vibe: "All levels, bring a mat", color: "#2dd4bf", category: "Wellness" },
-  { id: 5, title: "Peak District Hike", type: "Hiking", emoji: "🥾", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 4, maxSize: 8, members: ["Alex", "Dan", "Fiona", "Mo"], time: "Sat, 9AM", location: "Peak District, UK", vibe: "Moderate trail, 12km", color: "#78716c", category: "Outdoors" },
-  { id: 6, title: "Sunday Brunch Crawl", type: "Brunch", emoji: "🥞", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 3, maxSize: 8, members: ["Maya", "Chris", "Ana"], time: "Sun, 10AM", location: "Shoreditch, London", vibe: "3 stops, unlimited coffee", color: "#fb923c", category: "Food & Drink" },
-  { id: 7, title: "5-a-side Football", type: "Football", emoji: "⚽", host: "Alex Rivera", hostId: "u1", hostAvatar: "AR", hostGradient: "linear-gradient(135deg, #FF3CAC, #784BA0)", groupSize: 6, maxSize: 10, members: ["Alex", "Jordan", "Sam", "Raj", "Tom", "Lena"], time: "Tue, 7PM", location: "Powerleague, Shoreditch", vibe: "Casual, mixed ability", color: "#22c55e", category: "Sports" },
-  { id: 8, title: "Jazz & Wine Evening", type: "Live Music", emoji: "🎸", host: "Maya Chen", hostId: "u2", hostAvatar: "MC", hostGradient: "linear-gradient(135deg, #2dd4bf, #0ea5e9)", groupSize: 2, maxSize: 6, members: ["Maya", "Ben"], time: "Fri, 8PM", location: "Ronnie Scott's, Soho", vibe: "Relaxed & sophisticated", color: "#f43f5e", category: "Culture" },
-];
 
 
 
@@ -126,8 +76,8 @@ function useBackButton(callback) {
 
 export default function App() {
   const [screen, setScreen] = useState("explore");
-  const [events, setEvents] = useState(MOCK_EVENTS);
-  const [users] = useState(MOCK_USERS);
+  const [events, setEvents] = useState([]);
+  const [users] = useState([]);
   const [filterCat, setFilterCat] = useState("All");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewingUser, setViewingUser] = useState(null);
@@ -145,7 +95,7 @@ export default function App() {
   const [showRating, setShowRating] = useState(null); // holds the event to rate
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationSentRef = useRef(false);
-
+const [notifications, setNotifications] = useState([]);
 
 
   const navigateTo = (newScreen, opts = {}) => {
@@ -931,7 +881,13 @@ if (!user) return (
     onNavigate={(s) => navigateTo(s)}
     onRateSquad={async (eventId) => {
   const numId = parseInt(eventId);
-  // fetch the event directly from supabase since past events are filtered out
+  const { data: existing } = await supabase.from("ratings").select("id").eq("event_id", numId).eq("rater_id", user.id);
+  if (existing && existing.length > 0) {
+  await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "rate_squad").eq("data->>event_id", String(numId));
+  setToast("You already rated this squad ✅");
+  setTimeout(() => setToast(null), 3000);
+  return;
+}
   const { data } = await supabase.from("events").select("*").eq("id", numId).single();
   if (data) {
     const formatted = {
@@ -1050,7 +1006,13 @@ if (!user) return (
   <RatingModal
     event={showRating}
     user={user}
-    onClose={() => setShowRating(null)}
+    onClose={async (rated) => {
+      if (rated) {
+        await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "rate_squad").eq("data->>event_id", String(showRating.id));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+      setShowRating(null);
+    }}
   />
 )}
 
