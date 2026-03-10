@@ -660,12 +660,22 @@ if (!user) return (
               <span style={{ fontSize: 13, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 600 }}>{spotsLeft(selectedEvent)} open</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-{(selectedEvent.memberNames && selectedEvent.memberNames.length > 0 ? selectedEvent.memberNames : selectedEvent.members).map((m, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, background: "#f8f5f0", borderRadius: 100, padding: "5px 12px 5px 5px" }}>
-                  <div className="avatar-ring" style={{ width: 26, height: 26, background: selectedEvent.color + "55", color: "#fff", fontSize: 10, fontWeight: 800 }}>{m[0].toUpperCase()}</div>
-                  <span style={{ fontSize: 14, fontWeight: 500 }}>{m}</span>
-                </div>
-              ))}
+{(selectedEvent.memberNames && selectedEvent.memberNames.length > 0 ? selectedEvent.memberNames : selectedEvent.members).map((m, i) => {
+  const memberId = selectedEvent.members[i];
+  const isCurrentUser = memberId === user?.id;
+  return (
+    <div key={i} onClick={() => {
+      if (isCurrentUser) {
+        navigateTo("profile");
+      } else {
+        navigateTo("profileView", { user: { id: memberId, name: m } });
+      }
+    }} style={{ display: "flex", alignItems: "center", gap: 7, background: "#f8f5f0", borderRadius: 100, padding: "5px 12px 5px 5px", cursor: "pointer" }}>
+      <div className="avatar-ring" style={{ width: 26, height: 26, background: selectedEvent.color + "55", color: "#fff", fontSize: 10, fontWeight: 800 }}>{m[0].toUpperCase()}</div>
+      <span style={{ fontSize: 14, fontWeight: 500 }}>{m}</span>
+    </div>
+  );
+})}
             </div>
             <div className="progress">
               <div className="progress-fill" style={{ width: `${(selectedEvent.groupSize / selectedEvent.maxSize) * 100}%`, background: selectedEvent.color }} />
