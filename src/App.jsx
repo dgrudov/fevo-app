@@ -195,27 +195,7 @@ useEffect(() => {
       e.members.length > 1
     );
 
-if (unratedEvents.length > 0) {
-  const { data: existingNotifs } = await supabase
-    .from("notifications")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("type", "rate_squad");
 
-  const unnotifiedEvents = unratedEvents.filter(e =>
-    !existingNotifs?.some(n => n.data?.event_id === e.id)
-  );
-
-  for (const event of unnotifiedEvents) {
-    await sendNotification(
-      user.id,
-      "rate_squad",
-      "Rate your squad ⭐",
-      `How was ${event.emoji} ${event.title}? Rate the people you met`,
-      { event_id: event.id }
-    );
-  }
-}
   }
 
   const activeEvents = formatted.filter(e => {
