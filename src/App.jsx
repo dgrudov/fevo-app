@@ -826,7 +826,7 @@ if (!user) return (
                 <div className="card shadow-sm" style={{ padding: 18, background: "#f8f5f0" }}>
                   <div className="display" style={{ fontWeight: 700, fontSize: 19, marginBottom: 4 }}>{createForm.title}</div>
                   <div style={{ color: "#8a7a6a", fontSize: 14, display: "flex", gap: 10 }}>
-                    <span>🕐 {createForm.time || "TBD"}</span>
+                    <span>🕐 {createForm.time && createForm.time !== "TBD" ? new Date(createForm.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "TBD"}</span>
                     <span>📍 {createForm.location || "TBD"}</span>
                   </div>
                 </div>
