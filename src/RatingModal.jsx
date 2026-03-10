@@ -44,7 +44,7 @@ const handleSubmit = async () => {
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>⭐</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>Rate your squad</h2>
-          <p style={{ fontSize: 14, color: "#8a7a6a", marginTop: 4 }}>{event.emoji} {event.title} · Ratings are anonymous</p>
+          <p style={{ fontSize: 14, color: "#9a6a5a", marginTop: 4 }}>{event.emoji} {event.title} · Ratings are anonymous</p>
         </div>
 
         {membersToRate.map(member => (
@@ -74,8 +74,8 @@ const handleSubmit = async () => {
 
         <button onClick={handleSubmit} disabled={submitting || membersToRate.some(m => !ratings[m.id])} style={{
           width: "100%", padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700,
-          background: membersToRate.some(m => !ratings[m.id]) ? "#e8e3db" : "#1a1209",
-          color: membersToRate.some(m => !ratings[m.id]) ? "#a89f92" : "#f8f5f0",
+          background: membersToRate.some(m => !ratings[m.id]) ? "#fdddd5" : "#ff5733",
+          color: membersToRate.some(m => !ratings[m.id]) ? "#c4957a" : "#fff5f0",
           border: "none", cursor: membersToRate.some(m => !ratings[m.id]) ? "not-allowed" : "pointer",
           marginBottom: 12,
         }}>
@@ -83,7 +83,7 @@ const handleSubmit = async () => {
         </button>
         <button onClick={() => onClose(false)} style={{
           width: "100%", padding: 12, borderRadius: 14, fontSize: 14, fontWeight: 600,
-          background: "none", border: "none", color: "#8a7a6a", cursor: "pointer",
+          background: "none", border: "none", color: "#9a6a5a", cursor: "pointer",
         }}>Skip for now</button>
       </div>
     </div>

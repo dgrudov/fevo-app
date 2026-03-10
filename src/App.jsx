@@ -402,7 +402,7 @@ await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_
   const selectedType = ACTIVITY_TYPES.find(t => t.label === createForm.type);
 
 if (!authReady) return (
-  <div style={{ minHeight: "100vh", background: "#f8f5f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+  <div style={{ minHeight: "100vh", background: "#fff5f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
     <div style={{ fontSize: 40 }}>🌍</div>
   </div>
 );
@@ -413,7 +413,7 @@ if (!user) return (
 
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f5f0", fontFamily: "'DM Sans', sans-serif", color: "#1a1209" }}>
+    <div style={{ minHeight: "100vh", background: "#fff5f0", fontFamily: "'DM Sans', sans-serif", color: "#ff5733" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -424,13 +424,13 @@ if (!user) return (
         .card { background: #fff; border-radius: 20px; border: 1px solid rgba(0,0,0,0.06); }
         .shadow { box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
         .shadow-sm { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-        input, select, textarea { background: #faf9f7; border: 1.5px solid #e8e3db; color: #1a1209; border-radius: 12px; padding: 12px 16px; font-size: 15px; width: 100%; outline: none; font-family: 'DM Sans', sans-serif; transition: border 0.2s; }
-        input:focus, select:focus, textarea:focus { border-color: #1a1209; background: #fff; }
-        input::placeholder, textarea::placeholder { color: #a89f92; }
+        input, select, textarea { background: #faf9f7; border: 1.5px solid #fdddd5; color: #ff5733; border-radius: 12px; padding: 12px 16px; font-size: 15px; width: 100%; outline: none; font-family: 'DM Sans', sans-serif; transition: border 0.2s; }
+        input:focus, select:focus, textarea:focus { border-color: #ff5733; background: #fff; }
+        input::placeholder, textarea::placeholder { color: #c4957a; }
         select option { background: #fff; }
         .fade-in { animation: fadeIn 0.35s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(26,18,9,0.06); border-radius: 100px; padding: 5px 12px; font-size: 13px; color: #5a4e40; font-weight: 500; }
+        .chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(26,18,9,0.06); border-radius: 100px; padding: 5px 12px; font-size: 13px; color: #c04020; font-weight: 500; }
         .avatar-ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
         .tab-btn { cursor: pointer; padding: 8px 18px; border-radius: 100px; font-size: 14px; font-weight: 600; transition: all 0.18s; border: none; }
         .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; border-radius: 12px; overflow: hidden; }
@@ -454,7 +454,7 @@ if (!user) return (
           <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>Explore</h1>
-              <p style={{ color: "#8a7a6a", fontSize: 14, marginTop: 2 }}>{filteredEvents.length} events near you</p>
+              <p style={{ color: "#9a6a5a", fontSize: 14, marginTop: 2 }}>{filteredEvents.length} events near you</p>
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
              {joined && joined.members?.includes(user?.id) && (
@@ -481,7 +481,7 @@ if (!user) return (
 
               <div className="avatar-ring btn" onClick={() => navigateTo("profile")} style={{
                 width: 40, height: 40, background: ME.gradient, color: "#fff", fontSize: 15,
-                boxShadow: "0 0 0 2px #f8f5f0, 0 0 0 4px #1a1209",
+                boxShadow: "0 0 0 2px #fff5f0, 0 0 0 4px #ff5733",
               }}>{ME.avatar}</div>
             </div>
           </div>
@@ -490,9 +490,9 @@ if (!user) return (
             {ACTIVITY_CATEGORIES.map(cat => (
               <button key={cat.label} className="tab-btn" onClick={() => setFilterCat(cat.label)} style={{
                 flexShrink: 0,
-                background: filterCat === cat.label ? "#1a1209" : "#fff",
-                color: filterCat === cat.label ? "#f8f5f0" : "#5a4e40",
-                border: filterCat === cat.label ? "none" : "1px solid #e8e3db",
+                background: filterCat === cat.label ? "#ff5733" : "#fff",
+                color: filterCat === cat.label ? "#fff5f0" : "#c04020",
+                border: filterCat === cat.label ? "none" : "1px solid #fdddd5",
                 fontSize: 13,
               }}>{cat.emoji} {cat.label}</button>
             ))}
@@ -512,7 +512,7 @@ if (!user) return (
                     }}>{event.emoji}</div>
                     <div>
                       <div className="display" style={{ fontWeight: 600, fontSize: 17, letterSpacing: -0.3, lineHeight: 1.2 }}>{event.title}</div>
-                      <div style={{ color: "#8a7a6a", fontSize: 13, marginTop: 3, display: "flex", gap: 5, alignItems: "center" }}>
+                      <div style={{ color: "#9a6a5a", fontSize: 13, marginTop: 3, display: "flex", gap: 5, alignItems: "center" }}>
                         <div className="avatar-ring" style={{ width: 18, height: 18, background: event.hostGradient, color: "#fff", fontSize: 8 }}>{event.hostAvatar}</div>
                         {event.host}
                       </div>
@@ -538,12 +538,12 @@ if (!user) return (
                         }}>{m[0].toUpperCase()}</div>
                       ))}
                       {event.members.length > 5 && (
-                        <div className="avatar-ring" style={{ width: 26, height: 26, marginLeft: -9, fontSize: 9, background: "#e8e3db", border: "2px solid #fff", color: "#5a4e40", fontWeight: 700, zIndex: 0 }}>
+                        <div className="avatar-ring" style={{ width: 26, height: 26, marginLeft: -9, fontSize: 9, background: "#fdddd5", border: "2px solid #fff", color: "#c04020", fontWeight: 700, zIndex: 0 }}>
                           +{event.members.length - 5}
                         </div>
                       )}
                     </div>
-                    <span style={{ fontSize: 13, color: "#8a7a6a" }}>{event.groupSize} joined</span>
+                    <span style={{ fontSize: 13, color: "#9a6a5a" }}>{event.groupSize} joined</span>
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 600, color: spotsLeft(event) <= 2 ? "#ef4444" : "#10b981" }}>
                     {spotsLeft(event)} spots left
@@ -562,7 +562,7 @@ if (!user) return (
       {screen === "event" && selectedEvent && (
         <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
           <div style={{ padding: "20px 20px 0" }}>
-            <button className="btn card shadow-sm" onClick={() => navigateTo("explore", { event: null })} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
+            <button className="btn card shadow-sm" onClick={() => navigateTo("explore", { event: null })} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#c04020" }}>← Back</button>
           </div>
           <div style={{ margin: "16px 20px 0", borderRadius: 24, padding: 28, background: `linear-gradient(135deg, ${selectedEvent.color}18, ${selectedEvent.color}06)`, border: `1.5px solid ${selectedEvent.color}25` }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>{selectedEvent.emoji}</div>
@@ -570,7 +570,7 @@ if (!user) return (
             <span style={{ background: `${selectedEvent.color}20`, color: selectedEvent.color, borderRadius: 100, padding: "5px 14px", fontSize: 13, fontWeight: 700 }}>{selectedEvent.type}</span>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
               {[["🕐", selectedEvent.time && selectedEvent.time !== "TBD" ? new Date(selectedEvent.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : selectedEvent.time], ["📍", selectedEvent.location], ["✨", selectedEvent.vibe], ["👑", `Hosted by ${selectedEvent.host}`]].filter(x => x[1]).map(([icon, val], i) => (
-                <div key={i} style={{ display: "flex", gap: 10, color: "#5a4e40", fontSize: 15 }}><span>{icon}</span><span>{val}</span></div>
+                <div key={i} style={{ display: "flex", gap: 10, color: "#c04020", fontSize: 15 }}><span>{icon}</span><span>{val}</span></div>
               ))}
             </div>
           </div>
@@ -590,12 +590,12 @@ if (!user) return (
   return (
     <div style={{
       margin: "16px 20px 0", padding: "14px 18px", borderRadius: 14,
-      background: "linear-gradient(135deg, #1a1209, #3d2e1e)",
-      color: "#f8f5f0", display: "flex", alignItems: "center", gap: 12,
+      background: "linear-gradient(135deg, #ff5733, #3d2e1e)",
+      color: "#fff5f0", display: "flex", alignItems: "center", gap: 12,
     }}>
       <div style={{ fontSize: 24 }}>⏱</div>
       <div>
-        <div style={{ fontSize: 12, color: "#a89f92", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Starting in</div>
+        <div style={{ fontSize: 12, color: "#c4957a", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>Starting in</div>
         <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'DM Sans', sans-serif", letterSpacing: -0.5 }}>
           {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`}
         </div>
@@ -603,18 +603,20 @@ if (!user) return (
     </div>
   );
 })()}
-<button className="btn" onClick={() => navigateTo("chat", { event: selectedEvent })} style={{
-  margin: "14px 20px 0", width: "calc(100% - 40px)", padding: 15, borderRadius: 14,
-  fontSize: 15, fontWeight: 700, background: "#fff", color: "#1a1209",
-  border: "2px solid #1a1209", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-}}>💬 Squad Chat</button>
+{(selectedEvent.members.includes(user?.id) || selectedEvent.hostId === user?.id) && (
+  <button className="btn" onClick={() => navigateTo("chat", { event: selectedEvent })} style={{
+    margin: "14px 20px 0", width: "calc(100% - 40px)", padding: 15, borderRadius: 14,
+    fontSize: 15, fontWeight: 700, background: "#fff", color: "#ff5733",
+    border: "2px solid #ff5733", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+  }}>💬 Squad Chat</button>
+)}
 
           <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 18, display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
             onClick={() => { navigateTo("profileView", { user: { id: selectedEvent.hostId, name: selectedEvent.host } }); }}>
             <div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18 }}>{selectedEvent.hostAvatar}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700 }}>{selectedEvent.host}</div>
-              <div style={{ fontSize: 13, color: "#8a7a6a" }}>View profile →</div>
+              <div style={{ fontSize: 13, color: "#9a6a5a" }}>View profile →</div>
               {selectedEvent.hostId === user?.id && (
   <button className="btn" onClick={async () => {
     const { error } = await supabase.from("events").delete().eq("id", selectedEvent.id);
@@ -649,7 +651,7 @@ if (!user) return (
       } else {
         navigateTo("profileView", { user: { id: memberId, name: m } });
       }
-    }} style={{ display: "flex", alignItems: "center", gap: 7, background: "#f8f5f0", borderRadius: 100, padding: "5px 12px 5px 5px", cursor: "pointer" }}>
+    }} style={{ display: "flex", alignItems: "center", gap: 7, background: "#fff5f0", borderRadius: 100, padding: "5px 12px 5px 5px", cursor: "pointer" }}>
       <div className="avatar-ring" style={{ width: 26, height: 26, background: selectedEvent.color + "55", color: "#fff", fontSize: 10, fontWeight: 800 }}>{m[0].toUpperCase()}</div>
       <span style={{ fontSize: 14, fontWeight: 500 }}>{m}</span>
     </div>
@@ -681,14 +683,14 @@ if (!user) return (
 ) : selectedEvent.hostId === user?.id && selectedEvent.members.includes(user?.id) ? (
   <div style={{
     width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-    background: "#f8f5f0", color: "#8a7a6a", letterSpacing: 0.3,
-    border: "2px solid #e8e3db", textAlign: "center",
+    background: "#fff5f0", color: "#9a6a5a", letterSpacing: 0.3,
+    border: "2px solid #fdddd5", textAlign: "center",
   }}>👑 You're the host</div>
 ) : spotsLeft(selectedEvent) <= 0 ? (
   <div>
     <button disabled style={{
       width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-      background: "#e8e3db", color: "#a89f92", letterSpacing: 0.3,
+      background: "#fdddd5", color: "#c4957a", letterSpacing: 0.3,
       border: "none", marginBottom: 10,
     }}>Event is Full 😔</button>
     <button className="btn" onClick={() => {
@@ -696,8 +698,8 @@ if (!user) return (
       setTimeout(() => setToast(null), 3000);
     }} style={{
       width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-      background: "#fff", color: "#1a1209", letterSpacing: 0.3,
-      border: "2px solid #1a1209",
+      background: "#fff", color: "#ff5733", letterSpacing: 0.3,
+      border: "2px solid #ff5733",
     }}>🔔 Notify Me When a Spot Opens</button>
   </div>
 
@@ -705,7 +707,7 @@ if (!user) return (
 ) : selectedEvent.hostId === user?.id ? (
   <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{
     width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-    background: "#1a1209", color: "#f8f5f0", letterSpacing: 0.3,
+    background: "#ff5733", color: "#fff5f0", letterSpacing: 0.3,
   }}>👑 Rejoin Your Event</button>
   ) : myRequests.includes(selectedEvent.id) ? (
   <div style={{
@@ -716,7 +718,7 @@ if (!user) return (
 ) : (
   <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{
     width: "100%", padding: 15, borderRadius: 14, fontSize: 16, fontWeight: 700,
-    background: "#1a1209", color: "#f8f5f0", letterSpacing: 0.3,
+    background: "#ff5733", color: "#fff5f0", letterSpacing: 0.3,
   }}>Request to Join 🙌</button>
 )}
           </div>
@@ -728,23 +730,23 @@ if (!user) return (
         <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
           <div style={{ padding: "24px 20px 0" }}>
             <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>Create Event</h1>
-            <p style={{ color: "#8a7a6a", fontSize: 14, marginTop: 2 }}>Step {createStep} of 3</p>
+            <p style={{ color: "#9a6a5a", fontSize: 14, marginTop: 2 }}>Step {createStep} of 3</p>
             <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
               {[1,2,3].map(s => (
-                <div key={s} style={{ flex: 1, height: 4, borderRadius: 100, background: s <= createStep ? "#1a1209" : "#e8e3db", transition: "background 0.3s" }} />
+                <div key={s} style={{ flex: 1, height: 4, borderRadius: 100, background: s <= createStep ? "#ff5733" : "#fdddd5", transition: "background 0.3s" }} />
               ))}
             </div>
           </div>
           <div style={{ padding: "24px 20px 0" }}>
             {createStep === 1 && (
               <div className="fade-in">
-                <p style={{ fontWeight: 600, marginBottom: 16, color: "#5a4e40" }}>What are you planning?</p>
+                <p style={{ fontWeight: 600, marginBottom: 16, color: "#c04020" }}>What are you planning?</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
                   {ACTIVITY_CATEGORIES.slice(1).map(cat => (
                     <button key={cat.label} className="tab-btn" onClick={() => setActivityFilter(cat.label)} style={{
-                      background: activityFilter === cat.label ? "#1a1209" : "#fff",
-                      color: activityFilter === cat.label ? "#f8f5f0" : "#5a4e40",
-                      border: activityFilter === cat.label ? "none" : "1px solid #e8e3db",
+                      background: activityFilter === cat.label ? "#ff5733" : "#fff",
+                      color: activityFilter === cat.label ? "#fff5f0" : "#c04020",
+                      border: activityFilter === cat.label ? "none" : "1px solid #fdddd5",
                       fontSize: 12, padding: "6px 14px",
                     }}>{cat.emoji} {cat.label}</button>
                   ))}
@@ -756,7 +758,7 @@ if (!user) return (
                       setCreateStep(2);
                     }} style={{
                       background: createForm.type === type.label ? `${type.color}15` : "#fff",
-                      border: createForm.type === type.label ? `2px solid ${type.color}` : "2px solid #e8e3db",
+                      border: createForm.type === type.label ? `2px solid ${type.color}` : "2px solid #fdddd5",
                     }}>
                       <span style={{ fontSize: 26 }}>{type.emoji}</span>
                       <span style={{ fontSize: 11, fontWeight: 600, textAlign: "center", lineHeight: 1.3, color: "#3a2e20" }}>{type.label}</span>
@@ -777,15 +779,15 @@ if (!user) return (
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Your name *</label>
+                  <label style={{ fontSize: 13, color: "#9a6a5a", display: "block", marginBottom: 6, fontWeight: 500 }}>Your name *</label>
                   <input value={myName} onChange={e => setMyName(e.target.value)} placeholder="What's your name?" />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Event title *</label>
+                  <label style={{ fontSize: 13, color: "#9a6a5a", display: "block", marginBottom: 6, fontWeight: 500 }}>Event title *</label>
                   <input value={createForm.title} onChange={e => setCreateForm({ ...createForm, title: e.target.value })} placeholder="e.g. Morning Run – Sofia" />
                 </div>
              <div>
-  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>When</label>
+  <label style={{ fontSize: 13, color: "#9a6a5a", display: "block", marginBottom: 6, fontWeight: 500 }}>When</label>
   <DatePicker
     selected={createForm.timeDate || null}
    onChange={date => {
@@ -803,7 +805,7 @@ if (!user) return (
   />
 </div>
                 <div>
-  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Location</label>
+  <label style={{ fontSize: 13, color: "#9a6a5a", display: "block", marginBottom: 6, fontWeight: 500 }}>Location</label>
   <LocationInput
     value={createForm.location}
     onChange={val => setCreateForm({ ...createForm, location: val })}
@@ -811,49 +813,49 @@ if (!user) return (
   />
 </div>
                 <div>
-                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Vibe / description</label>
+                  <label style={{ fontSize: 13, color: "#9a6a5a", display: "block", marginBottom: 6, fontWeight: 500 }}>Vibe / description</label>
                   <textarea value={createForm.vibe} onChange={e => setCreateForm({ ...createForm, vibe: e.target.value })} placeholder="Describe the plan..." rows={2} style={{ resize: "none" }} />
                 </div>
                 <button className="btn" onClick={() => { if (createForm.title && myName) setCreateStep(3); }} style={{
                   padding: 14, borderRadius: 14, fontSize: 15, fontWeight: 700,
-                  background: createForm.title && myName ? "#1a1209" : "#e8e3db",
-                  color: createForm.title && myName ? "#f8f5f0" : "#a89f92",
+                  background: createForm.title && myName ? "#ff5733" : "#fdddd5",
+                  color: createForm.title && myName ? "#fff5f0" : "#c4957a",
                 }}>Continue →</button>
               </div>
             )}
             {createStep === 3 && (
               <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div className="card shadow-sm" style={{ padding: 18, background: "#f8f5f0" }}>
+                <div className="card shadow-sm" style={{ padding: 18, background: "#fff5f0" }}>
                   <div className="display" style={{ fontWeight: 700, fontSize: 19, marginBottom: 4 }}>{createForm.title}</div>
-                  <div style={{ color: "#8a7a6a", fontSize: 14, display: "flex", gap: 10 }}>
+                  <div style={{ color: "#9a6a5a", fontSize: 14, display: "flex", gap: 10 }}>
                     <span>🕐 {createForm.time && createForm.time !== "TBD" ? new Date(createForm.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "TBD"}</span>
                     <span>📍 {createForm.location || "TBD"}</span>
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Your group size</label>
+                  <label style={{ fontSize: 13, color: "#9a6a5a", display: "block", marginBottom: 6, fontWeight: 500 }}>Your group size</label>
                   <select value={myGroupSize} onChange={e => setMyGroupSize(e.target.value)}>
                     {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} person{n > 1 ? "s" : ""}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, color: "#8a7a6a", display: "block", marginBottom: 6, fontWeight: 500 }}>Max group size (total)</label>
+                  <label style={{ fontSize: 13, color: "#9a6a5a", display: "block", marginBottom: 6, fontWeight: 500 }}>Max group size (total)</label>
                   <select value={createForm.maxSize} onChange={e => setCreateForm({ ...createForm, maxSize: e.target.value })}>
                     {[4,6,8,10,12,15,20,30].map(n => <option key={n} value={n}>Up to {n} people</option>)}
                   </select>
                 </div>
               {(!createForm.title || !createForm.time || !createForm.location) && (
-  <p style={{ textAlign: "center", fontSize: 13, color: "#a89f92", marginBottom: 8 }}>
+  <p style={{ textAlign: "center", fontSize: 13, color: "#c4957a", marginBottom: 8 }}>
     {!createForm.title ? "Add a title to continue" : !createForm.time ? "Pick a date and time to continue" : "Add a location to continue"}
   </p>
 )}
 <button className="btn" onClick={handleCreate} disabled={!createForm.title || !createForm.time || !createForm.location} style={{
   padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700,
-  background: (!createForm.title || !createForm.time || !createForm.location) ? "#e8e3db" : "linear-gradient(135deg, #1a1209, #3a2e20)",
-  color: (!createForm.title || !createForm.time || !createForm.location) ? "#a89f92" : "#f8f5f0",
+  background: (!createForm.title || !createForm.time || !createForm.location) ? "#fdddd5" : "linear-gradient(135deg, #ff5733, #3a2e20)",
+  color: (!createForm.title || !createForm.time || !createForm.location) ? "#c4957a" : "#fff5f0",
   letterSpacing: 0.3, marginTop: 4, cursor: (!createForm.title || !createForm.time || !createForm.location) ? "not-allowed" : "pointer",
 }}>Publish Event ✨</button>
-<button className="btn" onClick={() => setCreateStep(2)} style={{ padding: 12, background: "none", fontSize: 14, color: "#8a7a6a" }}>← Back</button>
+<button className="btn" onClick={() => setCreateStep(2)} style={{ padding: 12, background: "none", fontSize: 14, color: "#9a6a5a" }}>← Back</button>
 </div>
             )}
           </div>
@@ -897,15 +899,15 @@ if (!user) return (
 {screen === "requests" && (
   <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
     <div style={{ padding: "20px 20px 0" }}>
-      <button className="btn card shadow-sm" onClick={() => navigateTo("explore")} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
+      <button className="btn card shadow-sm" onClick={() => navigateTo("explore")} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#c04020" }}>← Back</button>
     </div>
     <div style={{ padding: "20px 20px 0" }}>
       <h1 className="display" style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5 }}>Join Requests</h1>
-      <p style={{ color: "#8a7a6a", fontSize: 14, marginTop: 4 }}>People who want to join your events</p>
+      <p style={{ color: "#9a6a5a", fontSize: 14, marginTop: 4 }}>People who want to join your events</p>
     </div>
     <div style={{ padding: "16px 20px 0" }}>
       {joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "#8a7a6a" }}>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "#9a6a5a" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
           <p style={{ fontWeight: 600 }}>No pending requests</p>
         </div>
@@ -922,7 +924,7 @@ if (!user) return (
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{request.user_name}</div>
-                    <div style={{ fontSize: 13, color: "#8a7a6a" }}>wants to join {event?.emoji} {event?.title}</div>
+                    <div style={{ fontSize: 13, color: "#9a6a5a" }}>wants to join {event?.emoji} {event?.title}</div>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
@@ -945,7 +947,7 @@ if (!user) return (
                     setTimeout(() => setToast(null), 3000);
                   }} style={{
                     flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700,
-                    background: "#1a1209", color: "#f8f5f0", border: "none",
+                    background: "#ff5733", color: "#fff5f0", border: "none",
                   }}>✓ Accept</button>
                   <button className="btn" onClick={async () => {
                     await supabase.from("join_requests").update({ status: "declined" }).eq("id", request.id);
@@ -1008,7 +1010,7 @@ if (!user) return (
 {toast && (
   <div style={{
     position: "fixed", bottom: 90, left: "50%", transform: "translateX(-50%)",
-    background: "#1a1209", color: "#f8f5f0", padding: "14px 24px",
+    background: "#ff5733", color: "#fff5f0", padding: "14px 24px",
     borderRadius: 100, fontSize: 14, fontWeight: 600, zIndex: 999,
     boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
     animation: "fadeIn 0.3s ease",
@@ -1025,13 +1027,13 @@ if (!user) return (
           ].map(nav => (
             <button key={nav.id} className="btn" onClick={() => navigateTo(nav.id, { step: 1 })} style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-              background: nav.big ? "#1a1209" : "none", border: "none",
+              background: nav.big ? "#ff5733" : "none", border: "none",
               borderRadius: nav.big ? "50%" : 0, width: nav.big ? 52 : "auto", height: nav.big ? 52 : "auto",
               justifyContent: "center", marginTop: nav.big ? -16 : 0,
               boxShadow: nav.big ? "0 4px 20px rgba(26,18,9,0.3)" : "none",
             }}>
-              <span style={{ fontSize: nav.big ? 22 : 20, color: nav.big ? "#f8f5f0" : (screen === nav.id ? "#1a1209" : "#a89f92") }}>{nav.emoji}</span>
-              {!nav.big && <span style={{ fontSize: 11, fontWeight: 600, color: screen === nav.id ? "#1a1209" : "#a89f92" }}>{nav.label}</span>}
+              <span style={{ fontSize: nav.big ? 22 : 20, color: nav.big ? "#fff5f0" : (screen === nav.id ? "#ff5733" : "#c4957a") }}>{nav.emoji}</span>
+              {!nav.big && <span style={{ fontSize: 11, fontWeight: 600, color: screen === nav.id ? "#ff5733" : "#c4957a" }}>{nav.label}</span>}
             </button>
           ))}
         </div>
@@ -1128,7 +1130,7 @@ useEffect(() => {
     <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
       {!isMe && (
         <div style={{ padding: "20px 20px 0" }}>
-          <button className="btn card shadow-sm" onClick={onBack} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#5a4e40" }}>← Back</button>
+          <button className="btn card shadow-sm" onClick={onBack} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#c04020" }}>← Back</button>
         </div>
       )}
       <div style={{ margin: isMe ? "20px 20px 0" : "16px 20px 0", position: "relative" }}>
@@ -1138,7 +1140,7 @@ useEffect(() => {
   {isMe && <input type="file" accept="image/*" onChange={uploadAvatar} style={{ display: "none" }} />}
   <div className="avatar-ring" style={{
     width: 72, height: 72, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff",
-    fontSize: 28, fontWeight: 800, border: "4px solid #f8f5f0",
+    fontSize: 28, fontWeight: 800, border: "4px solid #fff5f0",
     boxShadow: "0 4px 16px rgba(0,0,0,0.1)", overflow: "hidden", position: "relative",
   }}>
     {avatarUrl ? (
@@ -1151,7 +1153,7 @@ useEffect(() => {
     )}
   </div>
   {isMe && (
-    <div style={{ position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: "50%", background: "#1a1209", border: "2px solid #f8f5f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff" }}>+</div>
+    <div style={{ position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: "50%", background: "#ff5733", border: "2px solid #fff5f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff" }}>+</div>
   )}
 </label>
         </div>
@@ -1165,20 +1167,20 @@ useEffect(() => {
             value={editForm.full_name}
             onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
             placeholder="Your name"
-            style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+            style={{ background: "#fff5f0", border: "1.5px solid #fdddd5", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#ff5733" }}
           />
           <textarea
             value={editForm.bio}
             onChange={e => setEditForm({ ...editForm, bio: e.target.value })}
             placeholder="Write a short bio..."
             rows={3}
-            style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209", resize: "none" }}
+            style={{ background: "#fff5f0", border: "1.5px solid #fdddd5", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#ff5733", resize: "none" }}
           />
           <input
             value={editForm.location}
             onChange={e => setEditForm({ ...editForm, location: e.target.value })}
             placeholder="Your city"
-            style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+            style={{ background: "#fff5f0", border: "1.5px solid #fdddd5", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#ff5733" }}
           />
           <input
   value={editForm.age}
@@ -1187,36 +1189,36 @@ useEffect(() => {
   type="number"
   min="16"
   max="99"
-  style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+  style={{ background: "#fff5f0", border: "1.5px solid #fdddd5", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#ff5733" }}
 />
 <input
   value={editForm.instagram}
   onChange={e => setEditForm({ ...editForm, instagram: e.target.value.replace("@", "") })}
   placeholder="Instagram username (without @)"
-  style={{ background: "#f8f5f0", border: "1.5px solid #e8e3db", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1a1209" }}
+  style={{ background: "#fff5f0", border: "1.5px solid #fdddd5", borderRadius: 12, padding: "10px 14px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#ff5733" }}
 />
           <div style={{ display: "flex", gap: 10 }}>
-            <button className="btn" onClick={saveProfile} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#1a1209", color: "#f8f5f0", border: "none" }}>Save</button>
-            <button className="btn" onClick={() => setEditing(false)} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#fff", color: "#1a1209", border: "2px solid #e8e3db" }}>Cancel</button>
+            <button className="btn" onClick={saveProfile} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#ff5733", color: "#fff5f0", border: "none" }}>Save</button>
+            <button className="btn" onClick={() => setEditing(false)} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#fff", color: "#ff5733", border: "2px solid #fdddd5" }}>Cancel</button>
           </div>
         </div>
       ) : (
         <div>
           <h2 className="display" style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>{profile?.full_name || displayName}</h2>
-          <p style={{ color: "#8a7a6a", fontSize: 14 }}>@{displayUsername}</p>
-          {profile?.bio && <p style={{ fontSize: 14, color: "#5a4e40", marginTop: 6, lineHeight: 1.5 }}>{profile.bio}</p>}
+          <p style={{ color: "#9a6a5a", fontSize: 14 }}>@{displayUsername}</p>
+          {profile?.bio && <p style={{ fontSize: 14, color: "#c04020", marginTop: 6, lineHeight: 1.5 }}>{profile.bio}</p>}
 <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
   {profile?.total_ratings > 0 && (
-  <span style={{ fontSize: 13, color: "#a89f92" }}>⭐ {profile.avg_rating} · {profile.total_ratings} {profile.total_ratings === 1 ? "rating" : "ratings"}</span>
+  <span style={{ fontSize: 13, color: "#c4957a" }}>⭐ {profile.avg_rating} · {profile.total_ratings} {profile.total_ratings === 1 ? "rating" : "ratings"}</span>
 )}
-  {profile?.location && <span style={{ fontSize: 13, color: "#a89f92" }}>📍 {profile.location}</span>}
-  {profile?.age && <span style={{ fontSize: 13, color: "#a89f92" }}>🎂 {profile.age} years old</span>}
+  {profile?.location && <span style={{ fontSize: 13, color: "#c4957a" }}>📍 {profile.location}</span>}
+  {profile?.age && <span style={{ fontSize: 13, color: "#c4957a" }}>🎂 {profile.age} years old</span>}
 {profile?.instagram && (
-  <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#a89f92", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+  <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#c4957a", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="#a89f92" strokeWidth="2" fill="none"/>
-      <circle cx="12" cy="12" r="4" stroke="#a89f92" strokeWidth="2" fill="none"/>
-      <circle cx="17.5" cy="6.5" r="1" fill="#a89f92"/>
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="#c4957a" strokeWidth="2" fill="none"/>
+      <circle cx="12" cy="12" r="4" stroke="#c4957a" strokeWidth="2" fill="none"/>
+      <circle cx="17.5" cy="6.5" r="1" fill="#c4957a"/>
     </svg>
     @{profile.instagram}
   </a>
@@ -1227,7 +1229,7 @@ useEffect(() => {
     </div>
     {isMe && !editing && (
       <div style={{ display: "flex", gap: 8 }}>
-        <div onClick={() => setEditing(true)} style={{ background: "#1a1209", color: "#f8f5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
+        <div onClick={() => setEditing(true)} style={{ background: "#ff5733", color: "#fff5f0", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Edit</div>
         <div onClick={async () => { await supabase.auth.signOut(); }} style={{ background: "#fee2e2", color: "#ef4444", borderRadius: 100, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Log out</div>
       </div>
     )}
@@ -1241,23 +1243,23 @@ useEffect(() => {
           {[["Activities", myEvents.length], ["Followers", 0], ["Following", 0]].map(([label, val]) => (
             <div key={label} style={{ textAlign: "center" }}>
               <div className="display" style={{ fontSize: 22, fontWeight: 700 }}>{val}</div>
-              <div style={{ fontSize: 12, color: "#8a7a6a", fontWeight: 500 }}>{label}</div>
+              <div style={{ fontSize: 12, color: "#9a6a5a", fontWeight: 500 }}>{label}</div>
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 4, marginTop: 24, borderBottom: "2px solid #e8e3db" }}>
+        <div style={{ display: "flex", gap: 4, marginTop: 24, borderBottom: "2px solid #fdddd5" }}>
               {[["photos", "📸 Photos"], ["history", "🎯 Hosted"], ["joined", "✅ Joined"]].map(([id, label]) => (
               <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
               padding: "10px 18px", borderRadius: "10px 10px 0 0", fontSize: 14, fontWeight: 600,
-              background: profileTab === id ? "#1a1209" : "transparent",
-              color: profileTab === id ? "#f8f5f0" : "#8a7a6a",
+              background: profileTab === id ? "#ff5733" : "transparent",
+              color: profileTab === id ? "#fff5f0" : "#9a6a5a",
               border: "none", marginBottom: -2,
             }}>{label}</button>
           ))}
         </div>
         {profileTab === "photos" && (
           <div className="fade-in" style={{ marginTop: 16 }}>
-            <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#9a6a5a" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📸</div>
               <p style={{ fontWeight: 600 }}>No photos yet</p>
               <p style={{ fontSize: 13, marginTop: 4 }}>Photos from activities will appear here</p>
@@ -1269,16 +1271,16 @@ useEffect(() => {
             {myEvents.length > 0 ? (
               myEvents.map((e, i) => (
                 <div key={i} className="card shadow-sm" style={{ padding: 16, marginBottom: 10, display: "flex", gap: 14, alignItems: "center" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0ece5" }}>{e.emoji}</div>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#fff0ea" }}>{e.emoji}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</div>
-                    <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
+                    <div style={{ fontSize: 13, color: "#9a6a5a", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
                   </div>
-                  <span style={{ background: "#f0ece5", color: "#5a4e40", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{e.type}</span>
+                  <span style={{ background: "#fff0ea", color: "#c04020", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{e.type}</span>
                 </div>
               ))
             ) : (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#9a6a5a" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
                 <p style={{ fontWeight: 600 }}>No activities yet</p>
                 <p style={{ fontSize: 13, marginTop: 4 }}>Create or join an event to start your history</p>
@@ -1292,16 +1294,16 @@ useEffect(() => {
     {joinedEvents.length > 0 ? (
       joinedEvents.map((e, i) => (
         <div key={i} className="card shadow-sm" style={{ padding: 16, marginBottom: 10, display: "flex", gap: 14, alignItems: "center" }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0ece5" }}>{e.emoji}</div>
+          <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#fff0ea" }}>{e.emoji}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</div>
-            <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
+            <div style={{ fontSize: 13, color: "#9a6a5a", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
           </div>
-          <span style={{ background: "#f0ece5", color: "#5a4e40", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{e.type}</span>
+          <span style={{ background: "#fff0ea", color: "#c04020", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{e.type}</span>
         </div>
       ))
     ) : (
-      <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+      <div style={{ textAlign: "center", padding: "40px 0", color: "#9a6a5a" }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
         <p style={{ fontWeight: 600 }}>No joined events yet</p>
         <p style={{ fontSize: 13, marginTop: 4 }}>Events you join will appear here</p>

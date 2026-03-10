@@ -80,25 +80,25 @@ export default function Chat({ event, user, myName, onBack }) {
   return (
     <div style={{
       maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column",
-      background: "#f8f5f0", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
+      background: "#fff5f0", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
     }}>
       {/* Header */}
-      <div style={{ padding: "20px 20px 16px", background: "#fff", borderBottom: "1px solid #e8e3db", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+      <div style={{ padding: "20px 20px 16px", background: "#fff", borderBottom: "1px solid #fdddd5", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: 4 }}>←</button>
         <div style={{ width: 40, height: 40, borderRadius: 12, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", background: `${event.color}18` }}>{event.emoji}</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 15, fontFamily: "'DM Sans', sans-serif" }}>{event.title}</div>
-          <div style={{ fontSize: 12, color: "#8a7a6a" }}>{event.groupSize} members</div>
+          <div style={{ fontSize: 12, color: "#9a6a5a" }}>{event.groupSize} members</div>
         </div>
       </div>
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
         {loading && (
-          <div style={{ textAlign: "center", color: "#8a7a6a", marginTop: 40 }}>Loading messages...</div>
+          <div style={{ textAlign: "center", color: "#9a6a5a", marginTop: 40 }}>Loading messages...</div>
         )}
         {!loading && messages.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+          <div style={{ textAlign: "center", padding: "40px 0", color: "#9a6a5a" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
             <p style={{ fontWeight: 600 }}>No messages yet</p>
             <p style={{ fontSize: 13, marginTop: 4 }}>Be the first to say something!</p>
@@ -111,7 +111,7 @@ export default function Chat({ event, user, myName, onBack }) {
           return (
             <div key={msg.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
               {showName && (
-                <div style={{ fontSize: 12, color: "#8a7a6a", marginBottom: 4, marginLeft: 36 }}>{msg.user_name}</div>
+                <div style={{ fontSize: 12, color: "#9a6a5a", marginBottom: 4, marginLeft: 36 }}>{msg.user_name}</div>
               )}
               <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isMe ? "row-reverse" : "row", width: "100%" }}>
                 {!isMe && (
@@ -123,12 +123,12 @@ export default function Chat({ event, user, myName, onBack }) {
                   maxWidth: "72%",
                   padding: "10px 14px",
                   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: isMe ? "#1a1209" : "#fff",
-                  color: isMe ? "#f8f5f0" : "#1a1209",
+                  background: isMe ? "#ff5733" : "#fff",
+                  color: isMe ? "#fff5f0" : "#ff5733",
                   fontSize: 15,
                   lineHeight: 1.5,
                   boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                  border: isMe ? "none" : "1px solid #e8e3db",
+                  border: isMe ? "none" : "1px solid #fdddd5",
                   wordBreak: "break-word",
                   whiteSpace: "pre-wrap",
                   overflowWrap: "anywhere",
@@ -136,7 +136,7 @@ export default function Chat({ event, user, myName, onBack }) {
                   {msg.content}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: "#a89f92", marginTop: 2, marginLeft: isMe ? 0 : 44, marginRight: isMe ? 4 : 0 }}>
+              <div style={{ fontSize: 11, color: "#c4957a", marginTop: 2, marginLeft: isMe ? 0 : 44, marginRight: isMe ? 4 : 0 }}>
                 {formatTime(msg.created_at)}
               </div>
             </div>
@@ -146,7 +146,7 @@ export default function Chat({ event, user, myName, onBack }) {
       </div>
 
       {/* Input */}
-      <div style={{ padding: "12px 16px 20px", background: "#fff", borderTop: "1px solid #e8e3db", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
+      <div style={{ padding: "12px 16px 20px", background: "#fff", borderTop: "1px solid #fdddd5", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
         <textarea
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
@@ -154,17 +154,17 @@ export default function Chat({ event, user, myName, onBack }) {
           placeholder="Message..."
           rows={1}
           style={{
-            flex: 1, background: "#f8f5f0", border: "1.5px solid #e8e3db",
+            flex: 1, background: "#fff5f0", border: "1.5px solid #fdddd5",
             borderRadius: 20, padding: "10px 16px", fontSize: 15,
             fontFamily: "'DM Sans', sans-serif", outline: "none",
-            resize: "none", color: "#1a1209", lineHeight: 1.4,
+            resize: "none", color: "#ff5733", lineHeight: 1.4,
           }}
         />
         <button onClick={sendMessage} disabled={!newMessage.trim()} style={{
           width: 44, height: 44, borderRadius: "50%", border: "none",
           cursor: newMessage.trim() ? "pointer" : "not-allowed",
-          background: newMessage.trim() ? "#1a1209" : "#e8e3db",
-          color: newMessage.trim() ? "#f8f5f0" : "#a89f92",
+          background: newMessage.trim() ? "#ff5733" : "#fdddd5",
+          color: newMessage.trim() ? "#fff5f0" : "#c4957a",
           fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>↑</button>
       </div>
