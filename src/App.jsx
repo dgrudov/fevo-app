@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
 import DatePicker from "react-datepicker";
@@ -144,7 +144,7 @@ export default function App() {
   const [now, setNow] = useState(new Date());
   const [showRating, setShowRating] = useState(null); // holds the event to rate
   const [unreadCount, setUnreadCount] = useState(0);
-
+  const notificationSentRef = useRef(false);
 
 
 
@@ -220,6 +220,7 @@ useEffect(() => {
 useEffect(() => {
   if (!user) return;
  const loadEvents = async () => {
+  notificationSentRef.current = false; // reset on user change only
   const { data, error } = await supabase.from("events").select("*").order("created_at", { ascending: false });
   if (error) { console.error(error); return; }
   const formatted = data.map(e => ({
@@ -243,17 +244,28 @@ useEffect(() => {
       e.members.includes(user.id) &&
       e.members.length > 1
     );
-    for (const event of passedEvents) {
-      const { data: existing } = await supabase
-        .from("ratings")
-        .select("id")
-        .eq("event_id", event.id)
-        .eq("rater_id", user.id);
-      if (existing && existing.length === 0) {
-        setShowRating(event);
-        break;
-      }
-    }
+
+if (unratedEvents.length > 0) {
+  const { data: existingNotifs } = await supabase
+    .from("notifications")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("type", "rate_squad");
+
+  const unnotifiedEvents = unratedEvents.filter(e =>
+    !existingNotifs?.some(n => n.data?.event_id === e.id)
+  );
+
+  for (const event of unnotifiedEvents) {
+    await sendNotification(
+      user.id,
+      "rate_squad",
+      "Rate your squad ⭐",
+      `How was ${event.emoji} ${event.title}? Rate the people you met`,
+      { event_id: event.id }
+    );
+  }
+}
   }
 
   const activeEvents = formatted.filter(e => {
@@ -266,6 +278,31 @@ useEffect(() => {
 };
   loadEvents();
 }, [user]);
+
+
+
+useEffect(() => {
+  if (!user) return;
+  const checkRatingNotifications = async () => {
+    const { data: allEvents } = await supabase.from("events").select("*");
+    if (!allEvents) return;
+    const now = new Date();
+    const passedEvents = allEvents
+      .map(e => ({ ...e, members: e.members || [], memberNames: e.member_names || [] }))
+      .filter(e => e.time && e.time !== "TBD" && new Date(e.time) < now && e.members.includes(user.id) && e.members.length > 1);
+
+    for (const event of passedEvents) {
+      const { data: existing } = await supabase.from("ratings").select("id").eq("event_id", event.id).eq("rater_id", user.id);
+      if (existing && existing.length === 0) {
+        const { data: existingNotif } = await supabase.from("notifications").select("id").eq("user_id", user.id).eq("type", "rate_squad").eq("data->>event_id", String(event.id));
+        if (!existingNotif || existingNotif.length === 0) {
+          await sendNotification(user.id, "rate_squad", "Rate your squad ⭐", `How was ${event.emoji} ${event.title}? Rate the people you met`, { event_id: event.id });
+        }
+      }
+    }
+  };
+  checkRatingNotifications();
+}, [user?.id]);
 
 
 
@@ -892,6 +929,24 @@ if (!user) return (
     user={user}
     onBack={() => navigateTo("explore")}
     onNavigate={(s) => navigateTo(s)}
+    onRateSquad={async (eventId) => {
+  const numId = parseInt(eventId);
+  // fetch the event directly from supabase since past events are filtered out
+  const { data } = await supabase.from("events").select("*").eq("id", numId).single();
+  if (data) {
+    const formatted = {
+      ...data,
+      groupSize: data.group_size,
+      maxSize: data.max_size,
+      host: data.host_name,
+      hostId: data.host_id,
+      members: data.members || [],
+      memberNames: data.member_names || [],
+    };
+    setShowRating(formatted);
+    navigateTo("explore");
+  }
+}}
   />
 )}
 {screen === "requests" && (

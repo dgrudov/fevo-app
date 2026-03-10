@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
-export default function Notifications({ user, onBack, onNavigate }) {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+    export default function Notifications({ user, onBack, onNavigate, onRateSquad }) {
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -68,10 +68,10 @@ await supabase.from("notifications").update({ read: true })
         )}
        {notifications.map(n => (
   <div key={n.id} className="card shadow-sm" onClick={() => {
-    if (n.type === "join_request") onNavigate("requests");
-    if (n.type === "request_accepted") onNavigate("explore");
-    if (n.type === "rate_squad") onNavigate("explore");
-  }} style={{
+  if (n.type === "join_request") onNavigate("requests");
+  if (n.type === "request_accepted") onNavigate("explore");
+  if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
+}} style={{
     padding: "16px 18px", marginBottom: 10,
     background: n.read ? "#fff" : "#faf7f2",
     borderLeft: n.read ? "none" : "3px solid #1a1209",
