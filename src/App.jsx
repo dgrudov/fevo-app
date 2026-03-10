@@ -1044,11 +1044,12 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
-  const myEvents = events ? events.filter(e => e.hostId === user?.id) : [];
+  const [allUserEvents, setAllUserEvents] = useState([]);
   const [editing, setEditing] = useState(false);
-const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "", age: "", instagram: "" });
-
-const uploadAvatar = async (e) => {
+  const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "", age: "", instagram: "" });
+  const myEvents = allUserEvents.filter(e => e.hostId === user?.id);
+  const joinedEvents = allUserEvents.filter(e => e.members.includes(user?.id) && e.hostId !== user?.id);
+  const uploadAvatar = async (e) => {
   const file = e.target.files[0];
   if (!file || !isMe) return;
   setUploading(true);
@@ -1090,13 +1091,28 @@ useEffect(() => {
       if (data) {
         setProfile(data);
         if (data.avatar_url) setAvatarUrl(data.avatar_url);
-       setEditForm({
-  full_name: data.full_name || "",
-  bio: data.bio || "",
-  location: data.location || "",
-  age: data.age || "",
-  instagram: data.instagram || "",
-});
+        setEditForm({
+          full_name: data.full_name || "",
+          bio: data.bio || "",
+          location: data.location || "",
+          age: data.age || "",
+          instagram: data.instagram || "",
+        });
+      }
+    });
+  supabase.from("events").select("*").order("created_at", { ascending: false })
+    .then(({ data }) => {
+      if (data) {
+        const formatted = data.map(e => ({
+          ...e,
+          groupSize: e.group_size,
+          maxSize: e.max_size,
+          host: e.host_name,
+          hostId: e.host_id,
+          members: e.members || [],
+          memberNames: e.member_names || [],
+        }));
+        setAllUserEvents(formatted);
       }
     });
 }, [user?.id]);
@@ -1230,8 +1246,8 @@ useEffect(() => {
           ))}
         </div>
         <div style={{ display: "flex", gap: 4, marginTop: 24, borderBottom: "2px solid #e8e3db" }}>
-          {[["photos", "📸 Photos"], ["history", "📅 History"]].map(([id, label]) => (
-            <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
+              {[["photos", "📸 Photos"], ["history", "🎯 Hosted"], ["joined", "✅ Joined"]].map(([id, label]) => (
+              <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
               padding: "10px 18px", borderRadius: "10px 10px 0 0", fontSize: 14, fontWeight: 600,
               background: profileTab === id ? "#1a1209" : "transparent",
               color: profileTab === id ? "#f8f5f0" : "#8a7a6a",
@@ -1256,7 +1272,7 @@ useEffect(() => {
                   <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0ece5" }}>{e.emoji}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</div>
-                    <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{e.time} · {e.groupSize} people</div>
+                    <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
                   </div>
                   <span style={{ background: "#f0ece5", color: "#5a4e40", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{e.type}</span>
                 </div>
@@ -1270,6 +1286,29 @@ useEffect(() => {
             )}
           </div>
         )}
+
+        {profileTab === "joined" && (
+  <div className="fade-in" style={{ marginTop: 16 }}>
+    {joinedEvents.length > 0 ? (
+      joinedEvents.map((e, i) => (
+        <div key={i} className="card shadow-sm" style={{ padding: 16, marginBottom: 10, display: "flex", gap: 14, alignItems: "center" }}>
+          <div style={{ width: 48, height: 48, borderRadius: 14, fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", background: "#f0ece5" }}>{e.emoji}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</div>
+            <div style={{ fontSize: 13, color: "#8a7a6a", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
+          </div>
+          <span style={{ background: "#f0ece5", color: "#5a4e40", borderRadius: 100, padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>{e.type}</span>
+        </div>
+      ))
+    ) : (
+      <div style={{ textAlign: "center", padding: "40px 0", color: "#8a7a6a" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+        <p style={{ fontWeight: 600 }}>No joined events yet</p>
+        <p style={{ fontSize: 13, marginTop: 4 }}>Events you join will appear here</p>
+      </div>
+    )}
+  </div>
+)}
       </div>
     </div>
 
