@@ -1185,12 +1185,20 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 4, marginTop: 22, borderBottom: "1px solid var(--border2)" }}>
-          {[["photos", "📸 Photos"], ["history", "🎯 Hosted"], ["joined", "✅ Joined"]].map(([id, label]) => (
-            <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{ padding: "9px 16px", borderRadius: "10px 10px 0 0", fontSize: 13, fontWeight: 600, background: profileTab === id ? "var(--accent)" : "transparent", color: profileTab === id ? "#fff" : "var(--text3)", border: "none", marginBottom: -1 }}>{label}</button>
+        {/* Tabs */}
+        <div style={{ display: "flex", marginTop: 22, background: "var(--bg3)", borderRadius: 12, padding: 4, gap: 4 }}>
+          {[["photos", "📸 Photos"], ["history", "📅 History"]].map(([id, label]) => (
+            <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
+              flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 700, border: "none",
+              background: profileTab === id ? "var(--card)" : "transparent",
+              color: profileTab === id ? "#fff" : "var(--text3)",
+              boxShadow: profileTab === id ? "0 2px 8px rgba(0,0,0,0.3)" : "none",
+              transition: "all 0.18s",
+            }}>{label}</button>
           ))}
         </div>
 
+        {/* Photos tab */}
         {profileTab === "photos" && (
           <div className="fade-in" style={{ marginTop: 16 }}>
             {profilePhotos.length === 0 ? (
@@ -1202,10 +1210,10 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
                 </p>
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3, borderRadius: 12, overflow: "hidden" }}>
                 {profilePhotos.map((p, i) => (
                   <div key={p.id} onClick={() => setProfilePhotoLightbox(i)} style={{ aspectRatio: "1", overflow: "hidden", cursor: "pointer", background: "var(--bg3)" }}>
-                    <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.2s" }} />
                   </div>
                 ))}
               </div>
@@ -1250,47 +1258,35 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
           </div>
         )}
 
-        {profileTab === "history" && (
-          <div className="fade-in" style={{ marginTop: 16 }}>
-            {myEvents.length > 0 ? myEvents.map((e, i) => (
-              <div key={i} className="card shadow-sm" style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", background: `${e.color || "var(--accent)"}15`, flexShrink: 0 }}>{e.emoji}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{e.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
+        {/* History tab — hosted + joined merged */}
+        {profileTab === "history" && (() => {
+          const allEvents = [
+            ...myEvents.map(e => ({ ...e, role: "hosted" })),
+            ...joinedEvents.map(e => ({ ...e, role: "joined" })),
+          ].sort((a, b) => new Date(b.time) - new Date(a.time));
+          return (
+            <div className="fade-in" style={{ marginTop: 16 }}>
+              {allEvents.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
+                  <p style={{ fontWeight: 600, color: "var(--text2)" }}>No events yet</p>
+                  <p style={{ fontSize: 13, marginTop: 4 }}>Events you host or join will appear here</p>
                 </div>
-                <span style={{ background: `${e.color || "var(--accent)"}15`, color: e.color || "var(--accent)", borderRadius: 100, padding: "3px 9px", fontSize: 11, fontWeight: 600 }}>{e.type}</span>
-              </div>
-            )) : (
-              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-                <p style={{ fontWeight: 600, color: "var(--text2)" }}>No activities yet</p>
-                <p style={{ fontSize: 13, marginTop: 4 }}>Create or join an event to get started</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {profileTab === "joined" && (
-          <div className="fade-in" style={{ marginTop: 16 }}>
-            {joinedEvents.length > 0 ? joinedEvents.map((e, i) => (
-              <div key={i} className="card shadow-sm" style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", background: `${e.color || "var(--accent)"}15`, flexShrink: 0 }}>{e.emoji}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{e.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : e.time} · {e.groupSize} people</div>
+              ) : allEvents.map((e, i) => (
+                <div key={i} className="card shadow-sm" style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center" }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 13, fontSize: 21, display: "flex", alignItems: "center", justifyContent: "center", background: `${e.color || "var(--accent)"}18`, border: `1px solid ${e.color || "var(--accent)"}25`, flexShrink: 0 }}>{e.emoji}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.title}</div>
+                    <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 3 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "TBD"} · {e.groupSize} people</div>
+                  </div>
+                  <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, borderRadius: 100, padding: "3px 10px", background: e.role === "hosted" ? "rgba(255,87,51,0.12)" : "rgba(16,185,129,0.1)", color: e.role === "hosted" ? "var(--accent)" : "#10b981", border: `1px solid ${e.role === "hosted" ? "rgba(255,87,51,0.2)" : "rgba(16,185,129,0.2)"}` }}>
+                    {e.role === "hosted" ? "Hosted" : "Joined"}
+                  </span>
                 </div>
-                <span style={{ background: `${e.color || "var(--accent)"}15`, color: e.color || "var(--accent)", borderRadius: 100, padding: "3px 9px", fontSize: 11, fontWeight: 600 }}>{e.type}</span>
-              </div>
-            )) : (
-              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-                <p style={{ fontWeight: 600, color: "var(--text2)" }}>No joined events yet</p>
-                <p style={{ fontSize: 13, marginTop: 4 }}>Events you join will appear here</p>
-              </div>
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
