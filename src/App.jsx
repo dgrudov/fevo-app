@@ -485,10 +485,17 @@ export default function App() {
                 border: filterDate === f.key ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent",
               }}>{f.label}</button>
             ))}
-            <label style={{ flexShrink: 0, cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent", display: "flex", alignItems: "center", gap: 5, position: "relative" }}>
-              📅 {filterDate === "pick" && filterPickedDate ? new Date(filterPickedDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Pick date"}
-              <input type="date" min={new Date().toISOString().split("T")[0]} onChange={e => { if (e.target.value) { setFilterPickedDate(e.target.value); setFilterDate("pick"); } }} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
-            </label>
+            <DatePicker
+              selected={filterPickedDate}
+              onChange={date => { setFilterPickedDate(date); setFilterDate("pick"); }}
+              minDate={new Date()}
+              popperPlacement="bottom-start"
+              customInput={
+                <button style={{ flexShrink: 0, cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent" }}>
+                  📅 {filterDate === "pick" && filterPickedDate ? filterPickedDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Pick date"}
+                </button>
+              }
+            />
           </div>
 
           <div style={{ padding: "8px 16px 0" }}>
