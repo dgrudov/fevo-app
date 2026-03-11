@@ -49,20 +49,22 @@ export default function Notifications({ user, onBack, onNavigate, onRateSquad })
 
   return (
     <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
-      <div style={{ padding: "20px 20px 0" }}>
-        <button className="btn card shadow-sm" onClick={onBack} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "#c04020" }}>← Back</button>
+      <div style={{ padding: "20px 16px 0" }}>
+        <button className="btn card shadow-sm" onClick={onBack} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "var(--text2)" }}>← Back</button>
       </div>
-      <div style={{ padding: "20px 20px 0" }}>
-        <h1 className="display" style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5 }}>Notifications</h1>
-        <p style={{ color: "#9a6a5a", fontSize: 14, marginTop: 4 }}>Stay up to date</p>
+      <div style={{ padding: "20px 16px 0" }}>
+        <h1 className="display" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, color: "#fff" }}>Notifications</h1>
+        <p style={{ color: "var(--text3)", fontSize: 14, marginTop: 4 }}>Stay up to date</p>
       </div>
-      <div style={{ padding: "16px 20px 0" }}>
-        {loading && <div style={{ textAlign: "center", color: "#9a6a5a", marginTop: 40 }}>Loading...</div>}
+      <div style={{ padding: "16px 16px 0" }}>
+        {loading && (
+          <div style={{ textAlign: "center", color: "var(--text3)", marginTop: 40 }}>Loading...</div>
+        )}
         {!loading && notifications.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "#9a6a5a" }}>
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text3)" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📬</div>
-            <p style={{ fontWeight: 600 }}>No notifications yet</p>
-            <p style={{ fontSize: 13, marginTop: 4 }}>When someone requests to join your event or you get rated you'll see it here</p>
+            <p style={{ fontWeight: 600, color: "var(--text2)" }}>No notifications yet</p>
+            <p style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>When someone requests to join your event or you get rated you'll see it here</p>
           </div>
         )}
         {notifications.map(n => (
@@ -75,18 +77,20 @@ export default function Notifications({ user, onBack, onNavigate, onRateSquad })
             }
             if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
           }} style={{
-            padding: "16px 18px", marginBottom: 10,
-            background: n.read ? "#fff" : "#faf7f2",
-            borderLeft: n.read ? "none" : "3px solid #ff5733",
-            cursor: "pointer",
+            padding: "16px 18px", marginBottom: 10, cursor: "pointer",
+            borderLeft: n.read ? "none" : "3px solid var(--accent)",
+            background: n.read ? "var(--card)" : "rgba(255,87,51,0.06)",
           }}>
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <div style={{ fontSize: 24, flexShrink: 0 }}>{getIcon(n.type)}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{n.title}</div>
-                {n.body && <div style={{ fontSize: 13, color: "#9a6a5a", marginTop: 3, lineHeight: 1.4 }}>{n.body}</div>}
-                <div style={{ fontSize: 12, color: "#c4957a", marginTop: 6 }}>{formatTime(n.created_at)}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>{n.title}</div>
+                {n.body && <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3, lineHeight: 1.4 }}>{n.body}</div>}
+                <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 6 }}>{formatTime(n.created_at)}</div>
               </div>
+              {!n.read && (
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", boxShadow: "0 0 6px var(--accent)", flexShrink: 0, marginTop: 4 }} />
+              )}
             </div>
           </div>
         ))}

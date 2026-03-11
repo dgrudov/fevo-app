@@ -10,9 +10,7 @@ export default function Chat({ event, user, myName, onBack }) {
   useEffect(() => {
     const loadMessages = async () => {
       const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("event_id", event.id)
+        .from("messages").select("*").eq("event_id", event.id)
         .order("created_at", { ascending: true });
       if (error) { console.error(error); return; }
       setMessages(data || []);
@@ -23,17 +21,14 @@ export default function Chat({ event, user, myName, onBack }) {
     const subscription = supabase
       .channel(`chat-${event.id}`)
       .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
+        event: "INSERT", schema: "public", table: "messages",
         filter: `event_id=eq.${event.id}`,
       }, (payload) => {
-  setMessages(prev => {
-    if (prev.some(m => m.id === payload.new.id)) return prev;
-    return [...prev, payload.new];
-  });
-})
-      .subscribe();
+        setMessages(prev => {
+          if (prev.some(m => m.id === payload.new.id)) return prev;
+          return [...prev, payload.new];
+        });
+      }).subscribe();
 
     return () => supabase.removeChannel(subscription);
   }, [event.id]);
@@ -43,64 +38,56 @@ export default function Chat({ event, user, myName, onBack }) {
   }, [messages]);
 
   useEffect(() => {
-    const textarea = document.querySelector("textarea");
+    const textarea = document.querySelector(".chat-input");
     if (!textarea) return;
-    const handleFocus = () => {
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 300);
-    };
+    const handleFocus = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
     textarea.addEventListener("focus", handleFocus);
     return () => textarea.removeEventListener("focus", handleFocus);
   }, []);
 
- const sendMessage = async () => {
-  if (!newMessage.trim()) return;
-  const content = newMessage.trim();
-  setNewMessage("");
-  const { error } = await supabase.from("messages").insert({
-    event_id: event.id,
-    user_id: user.id,
-    user_name: myName,
-    content: content,
-  });
-  if (error) console.error(error);
-};
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
+    const content = newMessage.trim();
+    setNewMessage("");
+    const { error } = await supabase.from("messages").insert({
+      event_id: event.id, user_id: user.id, user_name: myName, content,
+    });
+    if (error) console.error(error);
   };
 
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
+
+  const formatTime = (timestamp) =>
+    new Date(timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div style={{
       maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column",
-      background: "#fff5f0", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
+      background: "#0a0805", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
     }}>
       {/* Header */}
-      <div style={{ padding: "20px 20px 16px", background: "#fff", borderBottom: "1px solid #fdddd5", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: 4 }}>←</button>
-        <div style={{ width: 40, height: 40, borderRadius: 12, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", background: `${event.color}18` }}>{event.emoji}</div>
+      <div style={{
+        padding: "20px 16px 14px", background: "#161009",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
+      }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: 4, color: "rgba(255,255,255,0.6)" }}>←</button>
+        <div style={{ width: 40, height: 40, borderRadius: 12, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", background: `${event.color}18`, border: `1px solid ${event.color}25` }}>{event.emoji}</div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, fontFamily: "'DM Sans', sans-serif" }}>{event.title}</div>
-          <div style={{ fontSize: 12, color: "#9a6a5a" }}>{event.groupSize} members</div>
+          <div style={{ fontWeight: 700, fontSize: 15, fontFamily: "'DM Sans', sans-serif", color: "#fff" }}>{event.title}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{event.groupSize} members</div>
         </div>
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {loading && (
-          <div style={{ textAlign: "center", color: "#9a6a5a", marginTop: 40 }}>Loading messages...</div>
-        )}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {loading && <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", marginTop: 40 }}>Loading messages...</div>}
         {!loading && messages.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 0", color: "#9a6a5a" }}>
+          <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.3)" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
-            <p style={{ fontWeight: 600 }}>No messages yet</p>
+            <p style={{ fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>No messages yet</p>
             <p style={{ fontSize: 13, marginTop: 4 }}>Be the first to say something!</p>
           </div>
         )}
@@ -111,7 +98,7 @@ export default function Chat({ event, user, myName, onBack }) {
           return (
             <div key={msg.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
               {showName && (
-                <div style={{ fontSize: 12, color: "#9a6a5a", marginBottom: 4, marginLeft: 36 }}>{msg.user_name}</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 4, marginLeft: 36 }}>{msg.user_name}</div>
               )}
               <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isMe ? "row-reverse" : "row", width: "100%" }}>
                 {!isMe && (
@@ -120,23 +107,19 @@ export default function Chat({ event, user, myName, onBack }) {
                   </div>
                 )}
                 <div style={{
-                  maxWidth: "72%",
-                  padding: "10px 14px",
+                  maxWidth: "72%", padding: "10px 14px",
                   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: isMe ? "#ff5733" : "#fff",
-                  color: isMe ? "#fff5f0" : "#ff5733",
-                  fontSize: 15,
-                  lineHeight: 1.5,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                  border: isMe ? "none" : "1px solid #fdddd5",
-                  wordBreak: "break-word",
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
+                  background: isMe ? "linear-gradient(135deg, #ff5733, #ff8c42)" : "#1a1510",
+                  color: isMe ? "#fff" : "rgba(255,255,255,0.85)",
+                  fontSize: 15, lineHeight: 1.5,
+                  boxShadow: isMe ? "0 4px 16px rgba(255,87,51,0.3)" : "0 2px 8px rgba(0,0,0,0.3)",
+                  border: isMe ? "none" : "1px solid rgba(255,255,255,0.06)",
+                  wordBreak: "break-word", whiteSpace: "pre-wrap", overflowWrap: "anywhere",
                 }}>
                   {msg.content}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: "#c4957a", marginTop: 2, marginLeft: isMe ? 0 : 44, marginRight: isMe ? 4 : 0 }}>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2, marginLeft: isMe ? 0 : 44, marginRight: isMe ? 4 : 0 }}>
                 {formatTime(msg.created_at)}
               </div>
             </div>
@@ -146,26 +129,35 @@ export default function Chat({ event, user, myName, onBack }) {
       </div>
 
       {/* Input */}
-      <div style={{ padding: "12px 16px 20px", background: "#fff", borderTop: "1px solid #fdddd5", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
+      <div style={{
+        padding: "12px 16px 28px", background: "#161009",
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+        display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0,
+      }}>
         <textarea
+          className="chat-input"
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
           onKeyDown={handleKeyPress}
           placeholder="Message..."
           rows={1}
           style={{
-            flex: 1, background: "#fff5f0", border: "1.5px solid #fdddd5",
+            flex: 1, background: "#1a1510", border: "1.5px solid rgba(255,120,60,0.15)",
             borderRadius: 20, padding: "10px 16px", fontSize: 15,
             fontFamily: "'DM Sans', sans-serif", outline: "none",
-            resize: "none", color: "#ff5733", lineHeight: 1.4,
+            resize: "none", color: "#fff", lineHeight: 1.4, transition: "border 0.2s",
           }}
+          onFocus={e => e.target.style.borderColor = "#ff5733"}
+          onBlur={e => e.target.style.borderColor = "rgba(255,120,60,0.15)"}
         />
         <button onClick={sendMessage} disabled={!newMessage.trim()} style={{
           width: 44, height: 44, borderRadius: "50%", border: "none",
           cursor: newMessage.trim() ? "pointer" : "not-allowed",
-          background: newMessage.trim() ? "#ff5733" : "#fdddd5",
-          color: newMessage.trim() ? "#fff5f0" : "#c4957a",
+          background: newMessage.trim() ? "linear-gradient(135deg, #ff5733, #ff8c42)" : "#221c14",
+          color: newMessage.trim() ? "#fff" : "rgba(255,255,255,0.2)",
           fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          boxShadow: newMessage.trim() ? "0 4px 16px rgba(255,87,51,0.4)" : "none",
+          transition: "all 0.2s",
         }}>↑</button>
       </div>
     </div>
