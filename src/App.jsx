@@ -693,7 +693,7 @@ export default function App() {
                       const { error: upErr } = await supabase.storage.from("event-photos").upload(path, file);
                       if (upErr) { console.error(upErr); continue; }
                       const { data: urlData } = supabase.storage.from("event-photos").getPublicUrl(path);
-                      const { data: row, error: dbErr } = await supabase.from("event_photos").insert({ event_id: selectedEvent.id, user_id: user.id, user_name: myName, photo_url: urlData.publicUrl }).select().single();
+                      const { data: row, error: dbErr } = await supabase.from("event_photos").insert({ event_id: selectedEvent.id, user_id: user.id, user_name: myName, photo_url: urlData.publicUrl, event_title: selectedEvent.title, event_emoji: selectedEvent.emoji }).select().single();
                       if (dbErr) { console.error("DB insert error:", dbErr); continue; }
                       if (row) newRows.push(row);
                     }
@@ -711,8 +711,19 @@ export default function App() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
                   {eventPhotos.map((p, i) => (
-                    <div key={p.id} onClick={() => setPhotoLightbox(i)} style={{ aspectRatio: "1", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "var(--bg3)" }}>
-                      <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div key={p.id} style={{ aspectRatio: "1", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "var(--bg3)", position: "relative" }}>
+                      <img src={p.photo_url} alt="" onClick={() => setPhotoLightbox(i)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      {p.user_id === user?.id && (
+                        <button onClick={async (e) => {
+                          e.stopPropagation();
+                          const next = !p.show_on_profile;
+                          setEventPhotos(prev => prev.map(x => x.id === p.id ? { ...x, show_on_profile: next } : x));
+                          const { error } = await supabase.from("event_photos").update({ show_on_profile: next }).eq("id", p.id);
+                          if (error) { console.error("Bookmark error:", error); setEventPhotos(prev => prev.map(x => x.id === p.id ? { ...x, show_on_profile: !next } : x)); }
+                        }} style={{ position: "absolute", top: 5, right: 5, width: 26, height: 26, borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, background: p.show_on_profile ? "var(--accent)" : "rgba(0,0,0,0.55)", color: p.show_on_profile ? "#fff" : "rgba(255,255,255,0.7)", backdropFilter: "blur(4px)", transition: "all 0.18s" }} title={p.show_on_profile ? "Remove from profile" : "Add to profile"}>
+                          🔖
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -963,14 +974,38 @@ export default function App() {
               <button onClick={() => setPhotoLightbox(photoLightbox - 1)} disabled={isFirst} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: isFirst ? "rgba(255,255,255,0.2)" : "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 24, cursor: isFirst ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                 <div style={{ fontSize: 13, color: "var(--text3)" }}>by {photo.user_name}</div>
-                <button onClick={async () => {
-                  const resp = await fetch(photo.photo_url);
-                  const blob = await resp.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url; a.download = `fevo-photo-${photoLightbox + 1}.jpg`; a.click();
-                  URL.revokeObjectURL(url);
-                }} style={{ background: "rgba(255,87,51,0.15)", border: "1px solid rgba(255,87,51,0.3)", color: "var(--accent)", borderRadius: 100, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⬇ Save</button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={async () => {
+                    const resp = await fetch(photo.photo_url);
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url; a.download = `fevo-photo-${photoLightbox + 1}.jpg`; a.click();
+                    URL.revokeObjectURL(url);
+                  }} style={{ background: "rgba(255,87,51,0.15)", border: "1px solid rgba(255,87,51,0.3)", color: "var(--accent)", borderRadius: 100, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⬇ Save</button>
+                  {photo.user_id === user?.id && (
+                    <button onClick={async () => {
+                      const next = !photo.show_on_profile;
+                      setEventPhotos(prev => prev.map(x => x.id === photo.id ? { ...x, show_on_profile: next } : x));
+                      const { error } = await supabase.from("event_photos").update({ show_on_profile: next }).eq("id", photo.id);
+                      if (error) { console.error("Bookmark error:", error); setEventPhotos(prev => prev.map(x => x.id === photo.id ? { ...x, show_on_profile: !next } : x)); }
+                    }} style={{ background: photo.show_on_profile ? "var(--accent)" : "rgba(255,255,255,0.1)", border: photo.show_on_profile ? "1px solid var(--accent)" : "1px solid rgba(255,255,255,0.15)", color: "#fff", borderRadius: 100, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.18s" }}>
+                      {photo.show_on_profile ? "🔖 Saved" : "🔖 Save to Profile"}
+                    </button>
+                  )}
+                  {photo.user_id === user?.id && (
+                    <button onClick={async () => {
+                      if (!window.confirm("Delete this photo?")) return;
+                      const storagePath = photo.photo_url.split("/event-photos/")[1]?.split("?")[0];
+                      if (storagePath) await supabase.storage.from("event-photos").remove([storagePath]);
+                      await supabase.from("event_photos").delete().eq("id", photo.id);
+                      const newPhotos = eventPhotos.filter(x => x.id !== photo.id);
+                      setEventPhotos(newPhotos);
+                      if (newPhotos.length === 0) setPhotoLightbox(null);
+                      else setPhotoLightbox(Math.min(photoLightbox, newPhotos.length - 1));
+                    }} style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 100, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>🗑 Delete</button>
+                  )}
+                </div>
               </div>
               <button onClick={() => setPhotoLightbox(photoLightbox + 1)} disabled={isLast} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: isLast ? "rgba(255,255,255,0.2)" : "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 24, cursor: isLast ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
             </div>
@@ -1014,6 +1049,9 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
   const [allUserEvents, setAllUserEvents] = useState([]);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "", age: "", instagram: "" });
+  const [profilePhotos, setProfilePhotos] = useState([]);
+  const [profilePhotoLightbox, setProfilePhotoLightbox] = useState(null);
+  const profileTouchStart = useRef(0);
   const myEvents = allUserEvents.filter(e => e.hostId === user?.id);
   const joinedEvents = allUserEvents.filter(e => e.members.includes(user?.id) && e.hostId !== user?.id);
 
@@ -1053,6 +1091,8 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
       .then(({ data }) => {
         if (data) setAllUserEvents(data.map(e => ({ ...e, groupSize: e.group_size, maxSize: e.max_size, host: e.host_name, hostId: e.host_id, members: e.members || [], memberNames: e.member_names || [] })));
       });
+    supabase.from("event_photos").select("*").eq("user_id", user.id).eq("show_on_profile", true).order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setProfilePhotos(data); });
   }, [user?.id]);
 
   const displayName = isMe ? myName : (profile?.full_name || user?.name || "");
@@ -1138,10 +1178,61 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
         </div>
 
         {profileTab === "photos" && (
-          <div className="fade-in" style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📸</div>
-            <p style={{ fontWeight: 600, color: "var(--text2)" }}>No photos yet</p>
-            <p style={{ fontSize: 13, marginTop: 4 }}>Photos from activities will appear here</p>
+          <div className="fade-in" style={{ marginTop: 16 }}>
+            {profilePhotos.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📸</div>
+                <p style={{ fontWeight: 600, color: "var(--text2)" }}>No photos yet</p>
+                <p style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
+                  {isMe ? "Bookmark 🔖 photos from your squad albums to feature them here" : "No photos featured yet"}
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
+                {profilePhotos.map((p, i) => (
+                  <div key={p.id} onClick={() => setProfilePhotoLightbox(i)} style={{ aspectRatio: "1", overflow: "hidden", cursor: "pointer", background: "var(--bg3)" }}>
+                    <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                ))}
+              </div>
+            )}
+            {profilePhotoLightbox !== null && profilePhotos[profilePhotoLightbox] && (() => {
+              const ph = profilePhotos[profilePhotoLightbox];
+              const isFirst = profilePhotoLightbox === 0;
+              const isLast = profilePhotoLightbox === profilePhotos.length - 1;
+              return (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}
+                  onTouchStart={(e) => { profileTouchStart.current = e.touches[0].clientX; }}
+                  onTouchEnd={(e) => {
+                    const diff = profileTouchStart.current - e.changedTouches[0].clientX;
+                    if (diff > 50 && !isLast) setProfilePhotoLightbox(profilePhotoLightbox + 1);
+                    else if (diff < -50 && !isFirst) setProfilePhotoLightbox(profilePhotoLightbox - 1);
+                  }}
+                >
+                  <button onClick={() => setProfilePhotoLightbox(null)} style={{ position: "absolute", top: 20, right: 20, background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", width: 40, height: 40, borderRadius: "50%", fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                  <div style={{ position: "absolute", top: 26, left: "50%", transform: "translateX(-50%)", fontSize: 13, color: "var(--text3)", fontWeight: 600 }}>{profilePhotoLightbox + 1} / {profilePhotos.length}</div>
+                  <img src={ph.photo_url} alt="" style={{ maxWidth: "100%", maxHeight: "72vh", objectFit: "contain", padding: "0 16px", borderRadius: 12 }} />
+                  {(ph.event_emoji || ph.event_title) && (
+                    <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, padding: "6px 14px" }}>
+                      {ph.event_emoji && <span style={{ fontSize: 16 }}>{ph.event_emoji}</span>}
+                      {ph.event_title && <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>{ph.event_title}</span>}
+                    </div>
+                  )}
+                  <div style={{ position: "absolute", bottom: 40, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+                    <button onClick={() => setProfilePhotoLightbox(profilePhotoLightbox - 1)} disabled={isFirst} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: isFirst ? "rgba(255,255,255,0.2)" : "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 24, cursor: isFirst ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+                    {isMe && (
+                      <button onClick={async () => {
+                        await supabase.from("event_photos").update({ show_on_profile: false }).eq("id", ph.id);
+                        setProfilePhotos(prev => prev.filter(x => x.id !== ph.id));
+                        if (isLast && profilePhotoLightbox > 0) setProfilePhotoLightbox(profilePhotoLightbox - 1);
+                        else if (profilePhotos.length === 1) setProfilePhotoLightbox(null);
+                      }} style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 100, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Remove</button>
+                    )}
+                    <button onClick={() => setProfilePhotoLightbox(profilePhotoLightbox + 1)} disabled={isLast} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: isLast ? "rgba(255,255,255,0.2)" : "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 24, cursor: isLast ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
