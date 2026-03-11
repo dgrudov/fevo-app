@@ -55,15 +55,19 @@ export default function Chat({ event, user, myName, onBack }) {
     });
     if (error) { console.error(error); return; }
 
+    const preview = content.length > 60 ? content.slice(0, 57) + "…" : content;
     const otherMembers = (event.members || []).filter(id => id !== user.id);
     for (const memberId of otherMembers) {
       const { data: existing } = await supabase.from("notifications")
         .select("id").eq("user_id", memberId).eq("type", "new_message")
         .eq("data->>event_id", String(event.id)).eq("read", false).maybeSingle();
-      if (!existing) {
+      if (existing) {
+        await supabase.from("notifications").update({
+          title: `${myName} · ${event.title}`, body: preview, created_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
         await sendNotification(memberId, "new_message", `${myName} · ${event.title}`,
-          content.length > 60 ? content.slice(0, 57) + "…" : content,
-          { event_id: event.id, event_title: event.title });
+          preview, { event_id: event.id, event_title: event.title });
       }
     }
   };
