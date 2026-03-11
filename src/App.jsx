@@ -79,15 +79,26 @@ export default function App() {
   const [showRating, setShowRating] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationSentRef = useRef(false);
+  const touchStartX = useRef(0);
   const [notifications, setNotifications] = useState([]);
   const [avatarCache, setAvatarCache] = useState({});
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [eventPhotos, setEventPhotos] = useState([]);
+  const [photoLightbox, setPhotoLightbox] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const loadEventPhotos = async (eventId) => {
+    const { data } = await supabase.from("event_photos").select("*").eq("event_id", eventId).order("created_at", { ascending: false });
+    setEventPhotos(data || []);
+  };
 
   const navigateTo = (newScreen, opts = {}) => {
     window.history.pushState({ screen: newScreen }, "", window.location.href);
     setScreen(newScreen);
     if (opts.event !== undefined) {
       setSelectedEvent(opts.event);
+      setEventPhotos([]);
+      if (opts.event?.id) loadEventPhotos(opts.event.id);
       if (opts.event?.members?.length > 0) {
         supabase.from("profiles").select("id, avatar_url").in("id", opts.event.members)
           .then(({ data }) => {
@@ -551,6 +562,50 @@ export default function App() {
             <div className="progress"><div className="progress-fill" style={{ width: `${(selectedEvent.groupSize / selectedEvent.maxSize) * 100}%`, background: `linear-gradient(90deg, ${selectedEvent.color}, ${selectedEvent.color}99)` }} /></div>
           </div>
 
+          {(selectedEvent.members.includes(user?.id) || selectedEvent.hostId === user?.id) && (
+            <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <span style={{ fontWeight: 700, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>📸 Squad Photos</span>
+                <label style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--accent)", opacity: uploadingPhoto ? 0.5 : 1, pointerEvents: uploadingPhoto ? "none" : "auto" }}>
+                  {uploadingPhoto ? "Uploading…" : "+ Add"}
+                  <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={async (e) => {
+                    const files = Array.from(e.target.files);
+                    if (!files.length) return;
+                    setUploadingPhoto(true);
+                    const newRows = [];
+                    for (const file of files) {
+                      const ext = file.name.split(".").pop();
+                      const path = `${selectedEvent.id}/${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+                      const { error: upErr } = await supabase.storage.from("event-photos").upload(path, file);
+                      if (upErr) { console.error(upErr); continue; }
+                      const { data: urlData } = supabase.storage.from("event-photos").getPublicUrl(path);
+                      const { data: row, error: dbErr } = await supabase.from("event_photos").insert({ event_id: selectedEvent.id, user_id: user.id, user_name: myName, photo_url: urlData.publicUrl }).select().single();
+                      if (dbErr) { console.error("DB insert error:", dbErr); continue; }
+                      if (row) newRows.push(row);
+                    }
+                    if (newRows.length) setEventPhotos(prev => [...newRows.reverse(), ...prev]);
+                    setUploadingPhoto(false);
+                    e.target.value = "";
+                  }} />
+                </label>
+              </div>
+              {eventPhotos.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text3)", fontSize: 13 }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
+                  No photos yet — be the first to share!
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                  {eventPhotos.map((p, i) => (
+                    <div key={p.id} onClick={() => setPhotoLightbox(i)} style={{ aspectRatio: "1", borderRadius: 10, overflow: "hidden", cursor: "pointer", background: "var(--bg3)" }}>
+                      <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
             <p style={{ fontWeight: 700, marginBottom: 14, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Join this squad</p>
             {selectedEvent.members.includes(user?.id) ? (
@@ -757,6 +812,41 @@ export default function App() {
       {(screen === "profile" || screen === "profileView") && (
         <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} joined={joined} events={events} />
       )}
+
+      {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
+        const photo = eventPhotos[photoLightbox];
+        const isFirst = photoLightbox === 0;
+        const isLast = photoLightbox === eventPhotos.length - 1;
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              const diff = touchStartX.current - e.changedTouches[0].clientX;
+              if (diff > 50 && !isLast) setPhotoLightbox(photoLightbox + 1);
+              else if (diff < -50 && !isFirst) setPhotoLightbox(photoLightbox - 1);
+            }}
+          >
+            <button onClick={() => setPhotoLightbox(null)} style={{ position: "absolute", top: 20, right: 20, background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", width: 40, height: 40, borderRadius: "50%", fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            <div style={{ position: "absolute", top: 26, left: "50%", transform: "translateX(-50%)", fontSize: 13, color: "var(--text3)", fontWeight: 600 }}>{photoLightbox + 1} / {eventPhotos.length}</div>
+            <img src={photo.photo_url} alt="" style={{ maxWidth: "100%", maxHeight: "75vh", objectFit: "contain", padding: "0 16px", borderRadius: 12 }} />
+            <div style={{ position: "absolute", bottom: 40, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+              <button onClick={() => setPhotoLightbox(photoLightbox - 1)} disabled={isFirst} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: isFirst ? "rgba(255,255,255,0.2)" : "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 24, cursor: isFirst ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 13, color: "var(--text3)" }}>by {photo.user_name}</div>
+                <button onClick={async () => {
+                  const resp = await fetch(photo.photo_url);
+                  const blob = await resp.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = `fevo-photo-${photoLightbox + 1}.jpg`; a.click();
+                  URL.revokeObjectURL(url);
+                }} style={{ background: "rgba(255,87,51,0.15)", border: "1px solid rgba(255,87,51,0.3)", color: "var(--accent)", borderRadius: 100, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⬇ Save</button>
+              </div>
+              <button onClick={() => setPhotoLightbox(photoLightbox + 1)} disabled={isLast} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: isLast ? "rgba(255,255,255,0.2)" : "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 24, cursor: isLast ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+            </div>
+          </div>
+        );
+      })()}
 
       {showRating && (
         <RatingModal event={showRating} user={user} onClose={async (rated) => {
