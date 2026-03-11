@@ -21,7 +21,7 @@ export default function Auth({ onLogin }) {
         username: name.toLowerCase().replace(/\s+/g, ""),
         bio: "Ready for anything 🌍", location: "Sofia, BG",
       });
-      onLogin(data.user, name);
+      onLogin(data.user, name, true);
     }
     setLoading(false);
   };
@@ -33,6 +33,11 @@ export default function Auth({ onLogin }) {
     if (loginError) { setError(loginError.message); setLoading(false); return; }
     if (data.user) {
       const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single();
+      if (profile?.banned === true) {
+        onLogin(data.user, profile?.full_name || "", false, true);
+        setLoading(false);
+        return;
+      }
       onLogin(data.user, profile?.full_name || "");
     }
     setLoading(false);

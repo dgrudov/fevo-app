@@ -86,6 +86,7 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [avatarCache, setAvatarCache] = useState({});
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isBanned, setIsBanned] = useState(false);
   const [chatReturnScreen, setChatReturnScreen] = useState("event");
   const [eventPhotos, setEventPhotos] = useState([]);
   const [photoLightbox, setPhotoLightbox] = useState(null);
@@ -171,30 +172,24 @@ export default function App() {
   }, [screen]);
 
   useEffect(() => {
+    // Only check banned/onboarded on existing session load (returning users)
+    // New signups are handled by the onLogin callback from Auth
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
-        supabase.from("profiles").select("full_name, onboarded").eq("id", session.user.id).maybeSingle()
+        supabase.from("profiles").select("full_name, onboarded, banned").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
-            if (data) {
-              setMyName(data.full_name || "");
-              if (!data.onboarded) setShowOnboarding(true);
-            }
+            if (!data) return;
+            if (data.banned === true) { setIsBanned(true); return; }
+            setMyName(data.full_name || "");
+            if (!data.onboarded) setShowOnboarding(true);
           });
       }
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === "SIGNED_IN") return; // handled by onLogin callback after profile check
       setUser(session?.user || null);
-      if (session?.user) {
-        supabase.from("profiles").select("full_name, onboarded").eq("id", session.user.id).maybeSingle()
-          .then(({ data }) => {
-            if (data) {
-              setMyName(data.full_name || "");
-              if (!data.onboarded) setShowOnboarding(true);
-            }
-          });
-      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -387,7 +382,17 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Auth onLogin={(u, name) => { setUser(u); setMyName(name); }} />;
+  if (!user) return <Auth onLogin={(u, name, isNewUser, banned) => { setIsBanned(false); setUser(u); if (banned) { setIsBanned(true); return; } setMyName(name); if (isNewUser) setShowOnboarding(true); }} />;
+
+  if (isBanned) return (
+    <div className="phone-frame" style={{ minHeight: "100vh", background: "#0a0805", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 32px", textAlign: "center" }}>
+      <div style={{ fontSize: 52, marginBottom: 20 }}>🚫</div>
+      <h1 style={{ fontFamily: "'Clash Display', serif", fontSize: 26, fontWeight: 800, color: "#fff", marginBottom: 12 }}>Account Suspended</h1>
+      <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 32 }}>Your account has been suspended due to violations of our community guidelines.</p>
+      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>If you believe this is a mistake, contact us at<br /><span style={{ color: "rgba(255,87,51,0.7)" }}>support@fevo.app</span></p>
+      <button onClick={() => supabase.auth.signOut()} style={{ marginTop: 32, padding: "12px 28px", borderRadius: 100, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Sign out</button>
+    </div>
+  );
 
   if (showOnboarding) return (
     <Onboarding onFinish={async () => {
@@ -451,19 +456,6 @@ export default function App() {
         .react-datepicker__time-list-item--selected { background: var(--accent) !important; color: #fff !important; }
         .react-datepicker__navigation-icon::before { border-color: var(--text2) !important; }
         .date-filter-picker { display: inline-flex; flex-shrink: 0; }
-        @media (min-width: 600px) {
-          body { background: #060402 !important; }
-          .phone-frame {
-            width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 32px 80px rgba(0,0,0,0.9), 0 0 60px rgba(255,87,51,0.06);
-            position: relative;
-          }
-          .frame-overlay {
-            left: 50% !important; right: auto !important;
-            transform: translateX(-50%) !important;
-            width: 480px !important; max-width: 480px !important;
-          }
-        }
       `}</style>
 
       {/* ── EXPLORE ── */}
