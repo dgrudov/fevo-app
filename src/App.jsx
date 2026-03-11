@@ -63,6 +63,7 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [filterCat, setFilterCat] = useState("All");
   const [filterDate, setFilterDate] = useState("all");
+  const [filterPickedDate, setFilterPickedDate] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewingUser, setViewingUser] = useState(null);
   const [myName, setMyName] = useState("");
@@ -288,8 +289,12 @@ export default function App() {
     const endOfWeek = new Date(today); endOfWeek.setDate(today.getDate() + 7);
     if (filterDate === "today") return t >= today && t < tomorrow;
     if (filterDate === "tomorrow") return t >= tomorrow && t < dayAfterTomorrow;
-    if (filterDate === "weekend") return t >= saturday && t <= endOfSunday;
     if (filterDate === "week") return t >= today && t < endOfWeek;
+    if (filterDate === "pick" && filterPickedDate) {
+      const picked = new Date(filterPickedDate); picked.setHours(0, 0, 0, 0);
+      const pickedEnd = new Date(picked); pickedEnd.setDate(picked.getDate() + 1);
+      return t >= picked && t < pickedEnd;
+    }
     return true;
   });
   const spotsLeft = e => e.maxSize - e.groupSize;
@@ -465,12 +470,11 @@ export default function App() {
             ))}
           </div>
 
-          <div style={{ overflowX: "auto", padding: "10px 20px 4px", display: "flex", gap: 7 }}>
+          <div style={{ overflowX: "auto", padding: "10px 20px 4px", display: "flex", gap: 7, alignItems: "center" }}>
             {[
               { key: "all", label: "Any time" },
               { key: "today", label: "Today" },
               { key: "tomorrow", label: "Tomorrow" },
-              { key: "weekend", label: "Weekend" },
               { key: "week", label: "This week" },
             ].map(f => (
               <button key={f.key} onClick={() => setFilterDate(f.key)} style={{
@@ -481,6 +485,10 @@ export default function App() {
                 border: filterDate === f.key ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent",
               }}>{f.label}</button>
             ))}
+            <label style={{ flexShrink: 0, cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent", display: "flex", alignItems: "center", gap: 5 }}>
+              📅 {filterDate === "pick" && filterPickedDate ? new Date(filterPickedDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Pick date"}
+              <input type="date" min={new Date().toISOString().split("T")[0]} onChange={e => { if (e.target.value) { setFilterPickedDate(e.target.value); setFilterDate("pick"); } }} style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }} />
+            </label>
           </div>
 
           <div style={{ padding: "8px 16px 0" }}>
@@ -499,7 +507,7 @@ export default function App() {
                     ? `No ${filterCat.toLowerCase()} events yet — why not host one?`
                     : "No upcoming events yet — be the first to create one!"}
                 </p>
-                <button className="btn" onClick={() => { setFilterDate("all"); setFilterCat("All"); }} style={{ marginTop: 20, padding: "10px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+                <button className="btn" onClick={() => { setFilterDate("all"); setFilterCat("All"); setFilterPickedDate(null); }} style={{ marginTop: 20, padding: "10px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>
                   Clear filters
                 </button>
               </div>
