@@ -62,6 +62,7 @@ export default function App() {
   const [screen, setScreen] = useState("explore");
   const [events, setEvents] = useState([]);
   const [filterCat, setFilterCat] = useState("All");
+  const [filterDate, setFilterDate] = useState("all");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewingUser, setViewingUser] = useState(null);
   const [myName, setMyName] = useState("");
@@ -272,7 +273,25 @@ export default function App() {
     loadRequests();
   }, [user]);
 
-  const filteredEvents = events.filter(e => filterCat === "All" || e.category === filterCat);
+  const filteredEvents = events.filter(e => {
+    if (filterCat !== "All" && e.category !== filterCat) return false;
+    if (filterDate === "all") return true;
+    if (!e.time || e.time === "TBD") return false;
+    const t = new Date(e.time);
+    if (isNaN(t.getTime())) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const dayAfterTomorrow = new Date(today); dayAfterTomorrow.setDate(today.getDate() + 2);
+    const daysUntilSat = (6 - today.getDay() + 7) % 7 || 7;
+    const saturday = new Date(today); saturday.setDate(today.getDate() + daysUntilSat);
+    const endOfSunday = new Date(saturday); endOfSunday.setDate(saturday.getDate() + 1); endOfSunday.setHours(23, 59, 59, 999);
+    const endOfWeek = new Date(today); endOfWeek.setDate(today.getDate() + 7);
+    if (filterDate === "today") return t >= today && t < tomorrow;
+    if (filterDate === "tomorrow") return t >= tomorrow && t < dayAfterTomorrow;
+    if (filterDate === "weekend") return t >= saturday && t <= endOfSunday;
+    if (filterDate === "week") return t >= today && t < endOfWeek;
+    return true;
+  });
   const spotsLeft = e => e.maxSize - e.groupSize;
 
   const handleJoin = async (event) => {
@@ -440,13 +459,51 @@ export default function App() {
 
           <div className="glow-line" style={{ marginTop: 14, marginBottom: 0 }} />
 
-          <div style={{ overflowX: "auto", padding: "12px 20px", display: "flex", gap: 8 }}>
+          <div style={{ overflowX: "auto", padding: "12px 20px 0", display: "flex", gap: 8 }}>
             {ACTIVITY_CATEGORIES.map(cat => (
               <button key={cat.label} className="tab-btn" onClick={() => setFilterCat(cat.label)} style={{ flexShrink: 0, background: filterCat === cat.label ? "var(--accent)" : "var(--bg3)", color: filterCat === cat.label ? "#fff" : "var(--text2)", border: filterCat === cat.label ? "none" : "1px solid var(--border2)", boxShadow: filterCat === cat.label ? "0 4px 16px rgba(255,87,51,0.35)" : "none" }}>{cat.emoji} {cat.label}</button>
             ))}
           </div>
 
-          <div style={{ padding: "0 16px" }}>
+          <div style={{ overflowX: "auto", padding: "10px 20px 4px", display: "flex", gap: 7 }}>
+            {[
+              { key: "all", label: "Any time" },
+              { key: "today", label: "Today" },
+              { key: "tomorrow", label: "Tomorrow" },
+              { key: "weekend", label: "Weekend" },
+              { key: "week", label: "This week" },
+            ].map(f => (
+              <button key={f.key} onClick={() => setFilterDate(f.key)} style={{
+                flexShrink: 0, cursor: "pointer", padding: "6px 14px", borderRadius: 100,
+                fontSize: 12, fontWeight: 600, transition: "all 0.18s",
+                background: filterDate === f.key ? "rgba(255,87,51,0.15)" : "transparent",
+                color: filterDate === f.key ? "var(--accent)" : "var(--text3)",
+                border: filterDate === f.key ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent",
+              }}>{f.label}</button>
+            ))}
+          </div>
+
+          <div style={{ padding: "8px 16px 0" }}>
+            {filteredEvents.length === 0 && (
+              <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                <div style={{ fontSize: 48, marginBottom: 16, filter: "grayscale(0.3)" }}>
+                  {filterDate !== "all" ? "📅" : filterCat !== "All" ? "🔍" : "🌍"}
+                </div>
+                <p className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text2)", marginBottom: 8 }}>No events found</p>
+                <p style={{ fontSize: 14, color: "var(--text3)", lineHeight: 1.5 }}>
+                  {filterDate !== "all" && filterCat !== "All"
+                    ? `No ${filterCat.toLowerCase()} events ${filterDate === "today" ? "today" : filterDate === "tomorrow" ? "tomorrow" : filterDate === "weekend" ? "this weekend" : "this week"}`
+                    : filterDate !== "all"
+                    ? `Nothing planned ${filterDate === "today" ? "today" : filterDate === "tomorrow" ? "tomorrow" : filterDate === "weekend" ? "this weekend" : "this week"} — be the first to create one!`
+                    : filterCat !== "All"
+                    ? `No ${filterCat.toLowerCase()} events yet — why not host one?`
+                    : "No upcoming events yet — be the first to create one!"}
+                </p>
+                <button className="btn" onClick={() => { setFilterDate("all"); setFilterCat("All"); }} style={{ marginTop: 20, padding: "10px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+                  Clear filters
+                </button>
+              </div>
+            )}
             {filteredEvents.map((event, i) => (
               <div key={event.id} className={`card shadow stagger-${Math.min(i + 1, 4)}`} onClick={() => navigateTo("event", { event })} style={{ padding: 18, marginBottom: 12, cursor: "pointer" }}>
                 <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: event.color, filter: "blur(30px)", opacity: 0.15, pointerEvents: "none" }} />
