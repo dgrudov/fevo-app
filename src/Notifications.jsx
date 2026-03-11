@@ -54,9 +54,20 @@ export default function Notifications({ user, onBack, onNavigate, onRateSquad, o
       <div style={{ padding: "20px 16px 0" }}>
         <button className="btn card shadow-sm" onClick={onBack} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "var(--text2)" }}>← Back</button>
       </div>
-      <div style={{ padding: "20px 16px 0" }}>
-        <h1 className="display" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, color: "#fff" }}>Notifications</h1>
-        <p style={{ color: "var(--text3)", fontSize: 14, marginTop: 4 }}>Stay up to date</p>
+      <div style={{ padding: "20px 16px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <h1 className="display" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, color: "#fff" }}>Notifications</h1>
+          <p style={{ color: "var(--text3)", fontSize: 14, marginTop: 4 }}>Stay up to date</p>
+        </div>
+        {notifications.some(n => n.type !== "join_request" && n.type !== "rate_squad") && (
+          <button onClick={async () => {
+            await supabase.from("notifications").delete().eq("user_id", user.id)
+              .neq("type", "join_request").neq("type", "rate_squad");
+            setNotifications(prev => prev.filter(n => n.type === "join_request" || n.type === "rate_squad"));
+          }} style={{ background: "none", border: "1px solid var(--border2)", borderRadius: 10, padding: "7px 14px", fontSize: 13, fontWeight: 600, color: "var(--text3)", cursor: "pointer", marginTop: 4 }}>
+            Clear all
+          </button>
+        )}
       </div>
       <div style={{ padding: "16px 16px 0" }}>
         {loading && (
@@ -79,8 +90,8 @@ export default function Notifications({ user, onBack, onNavigate, onRateSquad, o
             }
             if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
             if (n.type === "new_message") {
-              await supabase.from("notifications").update({ read: true }).eq("id", n.id);
-              setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, read: true } : notif));
+              await supabase.from("notifications").delete().eq("id", n.id);
+              setNotifications(prev => prev.filter(notif => notif.id !== n.id));
               onOpenChat(n.data?.event_id);
             }
           }} style={{
