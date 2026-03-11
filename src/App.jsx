@@ -1160,7 +1160,6 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
             <p style={{ color: "var(--text3)", fontSize: 13, marginTop: 2 }}>@{displayUsername}</p>
             {profile?.bio && <p style={{ fontSize: 14, color: "var(--text2)", marginTop: 8, lineHeight: 1.6 }}>{profile.bio}</p>}
             <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-              {profile?.total_ratings > 0 && <span style={{ fontSize: 12, color: "var(--text3)" }}>⭐ {profile.avg_rating} · {profile.total_ratings} ratings</span>}
               {profile?.location && <span style={{ fontSize: 12, color: "var(--text3)" }}>📍 {profile.location}</span>}
               {profile?.age && <span style={{ fontSize: 12, color: "var(--text3)" }}>🎂 {profile.age} years old</span>}
               {profile?.instagram && (
@@ -1173,11 +1172,15 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 32, marginTop: 20 }}>
-          {[["Activities", myEvents.length], ["Followers", 0], ["Following", 0]].map(([label, val]) => (
-            <div key={label} style={{ textAlign: "center" }}>
-              <div className="display" style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{val}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600 }}>{label}</div>
+        <div style={{ display: "flex", marginTop: 20, background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", overflow: "hidden" }}>
+          {[
+            { val: myEvents.length + joinedEvents.length, label: "Events" },
+            { val: 0, label: "Buddies" },
+            { val: profile?.total_ratings > 0 ? `⭐ ${Number(profile.avg_rating).toFixed(1)}` : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating" },
+          ].map((stat, i, arr) => (
+            <div key={stat.label} style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRight: i < arr.length - 1 ? "1px solid var(--border2)" : "none" }}>
+              <div className="display" style={{ fontSize: 20, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>{stat.val}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.8 }}>{stat.label}</div>
             </div>
           ))}
         </div>
