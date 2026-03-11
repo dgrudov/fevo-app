@@ -95,20 +95,43 @@ export default function App() {
   const [showRating, setShowRating] = useState(null); // holds the event to rate
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationSentRef = useRef(false);
-const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [avatarCache, setAvatarCache] = useState({});
 
+ const navigateTo = (newScreen, opts = {}) => {
+  window.history.pushState({ screen: newScreen }, "", window.location.href);
+  setScreen(newScreen);
+  if (opts.event !== undefined) {
+    setSelectedEvent(opts.event);
+    if (opts.event?.members?.length > 0) {
+      supabase.from("profiles").select("id, avatar_url").in("id", opts.event.members)
+        .then(({ data }) => {
+          if (data) {
+            const cache = {};
+            data.forEach(p => { if (p.avatar_url) cache[p.id] = p.avatar_url; });
+            setAvatarCache(prev => ({ ...prev, ...cache }));
+          }
+        });
+    }
+  }
+  if (opts.user !== undefined) setViewingUser(opts.user);
+  if (opts.step !== undefined) setCreateStep(opts.step);
+};
 
-  const navigateTo = (newScreen, opts = {}) => {
-    window.history.pushState({ screen: newScreen }, "", window.location.href);
-    setScreen(newScreen);
-    if (opts.event !== undefined) setSelectedEvent(opts.event);
-    if (opts.user !== undefined) setViewingUser(opts.user);
-    if (opts.step !== undefined) setCreateStep(opts.step);
-  };
 
   useEffect(() => {
     window.history.pushState({ screen: "explore" }, "", window.location.href);
   }, []);
+
+
+
+useEffect(() => {
+  if (!user) return;
+  supabase.from("profiles").select("id, avatar_url").eq("id", user.id).single()
+    .then(({ data }) => {
+      if (data?.avatar_url) setAvatarCache(prev => ({ ...prev, [data.id]: data.avatar_url }));
+    });
+}, [user?.id]);
 
 
 
@@ -205,6 +228,15 @@ useEffect(() => {
     return parsed > new Date();
   });
   setEvents(activeEvents);
+  const hostIds = [...new Set((data || []).map(e => e.host_id).filter(Boolean))];
+if (hostIds.length > 0) {
+  const { data: profiles } = await supabase.from("profiles").select("id, avatar_url").in("id", hostIds);
+  if (profiles) {
+    const cache = {};
+    profiles.forEach(p => { if (p.avatar_url) cache[p.id] = p.avatar_url; });
+    setAvatarCache(prev => ({ ...prev, ...cache }));
+  }
+}
 };
   loadEvents();
 }, [user]);
@@ -246,6 +278,16 @@ useEffect(() => {
     if (error) { console.error(error); return; }
     setJoinRequests(data || []);
     setMyRequests(data.filter(r => r.user_id === user.id).map(r => r.event_id));
+
+    const requesterIds = [...new Set(data.map(r => r.user_id).filter(Boolean))];
+    if (requesterIds.length > 0) {
+      const { data: profiles } = await supabase.from("profiles").select("id, avatar_url").in("id", requesterIds);
+      if (profiles) {
+        const cache = {};
+        profiles.forEach(p => { if (p.avatar_url) cache[p.id] = p.avatar_url; });
+        setAvatarCache(prev => ({ ...prev, ...cache }));
+      }
+    }
   };
   loadRequests();
 }, [user]);
@@ -391,7 +433,6 @@ await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_
     memberNames: data.member_names || [],
   };
   setEvents([formatted, ...events]);
-  setJoined(formatted);
   setCreateForm({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });  setCreateStep(1);
   setScreen("explore");
   setToast("Event created! 🎉");
@@ -480,9 +521,16 @@ if (!user) return (
 
 
               <div className="avatar-ring btn" onClick={() => navigateTo("profile")} style={{
-                width: 40, height: 40, background: ME.gradient, color: "#fff", fontSize: 15,
-                boxShadow: "0 0 0 2px #fff5f0, 0 0 0 4px #ff5733",
-              }}>{ME.avatar}</div>
+  width: 38, height: 38, borderRadius: "50%", overflow: "hidden",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  background: avatarCache[user?.id] ? "transparent" : "#ff5733",
+  color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer",
+}}>
+  {avatarCache[user?.id] 
+    ? <img src={avatarCache[user?.id]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    : myName?.[0]?.toUpperCase()
+  }
+</div>
             </div>
           </div>
 
@@ -513,7 +561,12 @@ if (!user) return (
                     <div>
                       <div className="display" style={{ fontWeight: 600, fontSize: 17, letterSpacing: -0.3, lineHeight: 1.2 }}>{event.title}</div>
                       <div style={{ color: "#9a6a5a", fontSize: 13, marginTop: 3, display: "flex", gap: 5, alignItems: "center" }}>
-                        <div className="avatar-ring" style={{ width: 18, height: 18, background: event.hostGradient, color: "#fff", fontSize: 8 }}>{event.hostAvatar}</div>
+<div className="avatar-ring" style={{ width: 18, height: 18, background: event.hostGradient, color: "#fff", fontSize: 8, overflow: "hidden" }}>
+  {avatarCache[event.hostId] 
+    ? <img src={avatarCache[event.hostId]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    : event.hostAvatar
+  }
+</div>
                         {event.host}
                       </div>
                     </div>
@@ -613,7 +666,12 @@ if (!user) return (
 
           <div className="card shadow-sm" style={{ margin: "14px 20px 0", padding: 18, display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
             onClick={() => { navigateTo("profileView", { user: { id: selectedEvent.hostId, name: selectedEvent.host } }); }}>
-            <div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18 }}>{selectedEvent.hostAvatar}</div>
+<div className="avatar-ring" style={{ width: 48, height: 48, background: selectedEvent.hostGradient, color: "#fff", fontSize: 18, overflow: "hidden" }}>
+  {avatarCache[selectedEvent.hostId]
+    ? <img src={avatarCache[selectedEvent.hostId]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    : selectedEvent.hostAvatar
+  }
+</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700 }}>{selectedEvent.host}</div>
               <div style={{ fontSize: 13, color: "#9a6a5a" }}>View profile →</div>
@@ -652,7 +710,12 @@ if (!user) return (
         navigateTo("profileView", { user: { id: memberId, name: m } });
       }
     }} style={{ display: "flex", alignItems: "center", gap: 7, background: "#fff5f0", borderRadius: 100, padding: "5px 12px 5px 5px", cursor: "pointer" }}>
-      <div className="avatar-ring" style={{ width: 26, height: 26, background: selectedEvent.color + "55", color: "#fff", fontSize: 10, fontWeight: 800 }}>{m[0].toUpperCase()}</div>
+<div className="avatar-ring" style={{ width: 26, height: 26, background: selectedEvent.color + "55", color: "#fff", fontSize: 10, fontWeight: 800, overflow: "hidden" }}>
+  {avatarCache[memberId]
+    ? <img src={avatarCache[memberId]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    : m[0].toUpperCase()
+  }
+</div>
       <span style={{ fontSize: 14, fontWeight: 500 }}>{m}</span>
     </div>
   );
@@ -919,9 +982,13 @@ if (!user) return (
             return (
               <div key={request.id} className="card shadow-sm" style={{ padding: 18, marginBottom: 12 }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14 }}>
-                  <div className="avatar-ring" style={{ width: 44, height: 44, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", fontSize: 16, fontWeight: 700 }}>
-                    {request.user_name?.[0]?.toUpperCase()}
+                  <div className="avatar-ring" style={{ width: 44, height: 44, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", fontSize: 16, fontWeight: 700, overflow: "hidden" }}>
+                    {avatarCache[request.user_id]
+                      ? <img src={avatarCache[request.user_id]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : request.user_name?.[0]?.toUpperCase()
+                    }
                   </div>
+
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{request.user_name}</div>
                     <div style={{ fontSize: 13, color: "#9a6a5a" }}>wants to join {event?.emoji} {event?.title}</div>
@@ -1135,8 +1202,8 @@ useEffect(() => {
       )}
       <div style={{ margin: isMe ? "20px 20px 0" : "16px 20px 0", position: "relative" }}>
         <div style={{ height: 120, borderRadius: 20, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", opacity: 0.9 }} />
-        <div style={{ position: "absolute", bottom: -28, left: 20, position: "relative", display: "inline-block" }}>
-            <label style={{ cursor: isMe ? "pointer" : "default" }}>
+<div style={{ position: "relative", display: "inline-block" }}>
+              <label style={{ cursor: isMe ? "pointer" : "default" }}>
   {isMe && <input type="file" accept="image/*" onChange={uploadAvatar} style={{ display: "none" }} />}
   <div className="avatar-ring" style={{
     width: 72, height: 72, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff",
