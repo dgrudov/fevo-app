@@ -92,6 +92,8 @@ export default function App() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [editingEvent, setEditingEvent] = useState(false);
   const [editEventForm, setEditEventForm] = useState({});
+  const [blockedIds, setBlockedIds] = useState([]);
+  const [reportSheet, setReportSheet] = useState(null); // userId being reported
 
   const loadEventPhotos = async (eventId) => {
     const { data } = await supabase.from("event_photos").select("*").eq("event_id", eventId).order("created_at", { ascending: false });
@@ -258,6 +260,12 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+    supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id)
+      .then(({ data }) => { if (data) setBlockedIds(data.map(b => b.blocked_id)); });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
     const loadRequests = async () => {
       const { data, error } = await supabase.from("join_requests").select("*").eq("status", "pending");
       if (error) { console.error(error); return; }
@@ -277,6 +285,7 @@ export default function App() {
   }, [user]);
 
   const filteredEvents = events.filter(e => {
+    if (blockedIds.includes(e.hostId)) return false;
     if (filterCat !== "All" && e.category !== filterCat) return false;
     if (filterDate === "all") return true;
     if (!e.time || e.time === "TBD") return false;
@@ -985,7 +994,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} joined={joined} events={events} />
+        <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1121,6 +1130,27 @@ export default function App() {
         </div>
       )}
 
+      {reportSheet && (
+        <div className="frame-overlay" style={{ position: "fixed", inset: 0, zIndex: 600, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }} onClick={() => setReportSheet(null)} />
+          <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "24px 20px 40px" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 100, background: "rgba(255,255,255,0.15)", margin: "0 auto 20px" }} />
+            <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", marginBottom: 4 }}>Report User</div>
+            <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 20 }}>Select a reason — our team will review it</div>
+            {["Inappropriate behavior", "Harassment", "Spam", "Fake profile", "Other"].map(reason => (
+              <button key={reason} onClick={async () => {
+                await supabase.from("reports").insert({ reporter_id: user.id, reported_id: reportSheet, reason });
+                setReportSheet(null);
+                setToast("Report submitted. Thank you 🙏"); setTimeout(() => setToast(null), 3000);
+              }} style={{ width: "100%", padding: "14px 18px", marginBottom: 8, borderRadius: 14, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text2)", fontSize: 15, fontWeight: 600, textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                {reason} <span style={{ color: "var(--text3)" }}>›</span>
+              </button>
+            ))}
+            <button onClick={() => setReportSheet(null)} style={{ width: "100%", padding: 14, marginTop: 4, borderRadius: 14, background: "transparent", border: "1px solid var(--border2)", color: "var(--text3)", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
       {showRating && (
         <RatingModal event={showRating} user={user} onClose={async (rated) => {
           if (rated) {
@@ -1149,7 +1179,7 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, blockedIds = [], onBlock, onUnblock, onReport }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -1215,9 +1245,28 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
         </div>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,87,51,0.15), transparent)" }} />
         {!isMe && (
-          <div style={{ position: "absolute", top: 16, left: 16 }}>
-            <button className="btn" onClick={onBack} style={{ padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(10px)" }}>← Back</button>
-          </div>
+          <>
+            <div style={{ position: "absolute", top: 16, left: 16 }}>
+              <button className="btn" onClick={onBack} style={{ padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(10px)" }}>← Back</button>
+            </div>
+            <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
+              {blockedIds.includes(user?.id) ? (
+                <button className="btn" onClick={async () => {
+                  await supabase.from("blocks").delete().eq("blocker_id", (await supabase.auth.getUser()).data.user?.id).eq("blocked_id", user.id);
+                  onUnblock(user.id);
+                }} style={{ padding: "6px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(10px)", cursor: "pointer" }}>Unblock</button>
+              ) : (
+                <button className="btn" onClick={async () => {
+                  if (!window.confirm(`Block ${displayName}? You won't see their events or profile.`)) return;
+                  const { data: { user: me } } = await supabase.auth.getUser();
+                  await supabase.from("blocks").insert({ blocker_id: me.id, blocked_id: user.id });
+                  onBlock(user.id);
+                  onBack();
+                }} style={{ padding: "6px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "rgba(255,100,100,0.9)", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(239,68,68,0.2)", backdropFilter: "blur(10px)", cursor: "pointer" }}>Block</button>
+              )}
+              <button className="btn" onClick={() => onReport(user.id)} style={{ padding: "6px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.15)", backdropFilter: "blur(10px)", cursor: "pointer" }}>Report</button>
+            </div>
+          </>
         )}
         {isMe && !editing && (
           <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
