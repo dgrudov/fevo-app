@@ -386,10 +386,12 @@ export default function App() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", fontFamily: "'DM Sans', sans-serif", color: "var(--text)" }}>
+    <div className="phone-frame" style={{ minHeight: "100vh", background: "var(--bg)", fontFamily: "'DM Sans', sans-serif", color: "var(--text)", overflowX: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { overflow-x: hidden; width: 100%; max-width: 100%; }
+        #root { overflow-x: hidden; width: 100%; max-width: 100%; }
         :root {
           --bg: #0a0805; --bg2: #110e09; --bg3: #1a1510; --bg4: #221c14;
           --border: rgba(255,120,60,0.12); --border2: rgba(255,255,255,0.06);
@@ -438,12 +440,21 @@ export default function App() {
         .react-datepicker__time-list-item--selected { background: var(--accent) !important; color: #fff !important; }
         .react-datepicker__navigation-icon::before { border-color: var(--text2) !important; }
         .date-filter-picker { display: inline-flex; flex-shrink: 0; }
+        @media (min-width: 600px) {
+          body { background: #060402 !important; }
+          .phone-frame {
+            width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 32px 80px rgba(0,0,0,0.9), 0 0 60px rgba(255,87,51,0.06);
+            position: relative; overflow-x: hidden;
+          }
+          .bottom-nav { border-radius: 0 0 0 0; }
+        }
       `}</style>
 
       {/* ── EXPLORE ── */}
       {screen === "explore" && (
-        <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
-          <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: "radial-gradient(ellipse, rgba(255,87,51,0.08), transparent 70%)", pointerEvents: "none" }} />
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+          <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 300, height: 200, background: "radial-gradient(ellipse, rgba(255,87,51,0.08), transparent 70%)", pointerEvents: "none" }} />
           <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
             <div>
               <h1 className="display" style={{ fontSize: 30, fontWeight: 700, letterSpacing: -0.5, color: "#fff" }}>Explore</h1>
@@ -465,13 +476,13 @@ export default function App() {
 
           <div className="glow-line" style={{ marginTop: 14, marginBottom: 0 }} />
 
-          <div style={{ overflowX: "auto", padding: "12px 20px 0", display: "flex", gap: 8 }}>
+          <div style={{ overflowX: "auto", padding: "12px 20px 0", display: "flex", gap: 8, width: "100%", maxWidth: "100%" }}>
             {ACTIVITY_CATEGORIES.map(cat => (
               <button key={cat.label} className="tab-btn" onClick={() => setFilterCat(cat.label)} style={{ flexShrink: 0, background: filterCat === cat.label ? "var(--accent)" : "var(--bg3)", color: filterCat === cat.label ? "#fff" : "var(--text2)", border: filterCat === cat.label ? "none" : "1px solid var(--border2)", boxShadow: filterCat === cat.label ? "0 4px 16px rgba(255,87,51,0.35)" : "none" }}>{cat.emoji} {cat.label}</button>
             ))}
           </div>
 
-          <div style={{ overflowX: "auto", padding: "10px 20px 4px", display: "flex", gap: 7, alignItems: "center" }}>
+          <div style={{ overflowX: "auto", padding: "10px 20px 4px", display: "flex", gap: 7, alignItems: "center", width: "100%", maxWidth: "100%" }}>
             {[
               { key: "all", label: "Any time" },
               { key: "today", label: "Today" },
@@ -566,7 +577,7 @@ export default function App() {
 
       {/* ── EVENT DETAIL ── */}
       {screen === "event" && selectedEvent && (
-        <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
           <div style={{ padding: "20px 16px 0" }}>
             <button className="btn card shadow-sm" onClick={() => navigateTo("explore", { event: null })} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "var(--text2)" }}>← Back</button>
           </div>
@@ -758,7 +769,7 @@ export default function App() {
 
       {/* ── CREATE ── */}
       {screen === "create" && (
-        <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
           <div style={{ padding: "24px 16px 0" }}>
             <div style={{ fontSize: 11, letterSpacing: 2.5, color: "var(--accent)", fontWeight: 700, marginBottom: 6 }}>CREATE EVENT</div>
             <h1 className="display" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, color: "#fff" }}>What's the plan?</h1>
@@ -882,7 +893,7 @@ export default function App() {
 
       {/* ── JOIN REQUESTS ── */}
       {screen === "requests" && (
-        <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
           <div style={{ padding: "20px 16px 0" }}>
             <button className="btn card shadow-sm" onClick={() => navigateTo("explore")} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "var(--text2)" }}>← Back</button>
           </div>
@@ -1099,7 +1110,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
   const displayUsername = isMe ? (myName ? myName.toLowerCase().replace(/\s+/g, "") : "you") : (profile?.username || "");
 
   return (
-    <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 100, background: "var(--bg)", minHeight: "100vh" }}>
+    <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100, background: "var(--bg)", minHeight: "100vh" }}>
       <div style={{ height: 140, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1a0800, #2d1200)" }} />
         <div style={{ position: "absolute", inset: 0, opacity: 0.12, fontSize: 34, display: "flex", flexWrap: "wrap", gap: 14, padding: 16, filter: "blur(1px)", lineHeight: 1 }}>
