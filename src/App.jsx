@@ -437,6 +437,7 @@ export default function App() {
         .react-datepicker__time-list-item:hover { background: var(--bg4) !important; }
         .react-datepicker__time-list-item--selected { background: var(--accent) !important; color: #fff !important; }
         .react-datepicker__navigation-icon::before { border-color: var(--text2) !important; }
+        .date-filter-picker { display: inline-flex; flex-shrink: 0; }
       `}</style>
 
       {/* ── EXPLORE ── */}
@@ -490,8 +491,10 @@ export default function App() {
               onChange={date => { setFilterPickedDate(date); setFilterDate("pick"); }}
               minDate={new Date()}
               popperPlacement="bottom-start"
+              popperProps={{ strategy: "fixed" }}
+              wrapperClassName="date-filter-picker"
               customInput={
-                <button style={{ flexShrink: 0, cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent" }}>
+                <button style={{ cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent" }}>
                   📅 {filterDate === "pick" && filterPickedDate ? filterPickedDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Pick date"}
                 </button>
               }
