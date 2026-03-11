@@ -84,6 +84,7 @@ export default function App() {
   const [notifications, setNotifications] = useState([]);
   const [avatarCache, setAvatarCache] = useState({});
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [chatReturnScreen, setChatReturnScreen] = useState("event");
   const [eventPhotos, setEventPhotos] = useState([]);
   const [photoLightbox, setPhotoLightbox] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -780,6 +781,7 @@ export default function App() {
             }
           }}
           onOpenChat={async (eventId) => {
+            setChatReturnScreen("notifications");
             const numId = parseInt(eventId);
             const found = events.find(e => e.id === numId);
             if (found) { navigateTo("chat", { event: found }); return; }
@@ -854,7 +856,12 @@ export default function App() {
       )}
 
       {screen === "chat" && selectedEvent && (
-        <Chat event={selectedEvent} user={user} myName={myName} onBack={() => navigateTo("event", { event: selectedEvent })} />
+        <Chat event={selectedEvent} user={user} myName={myName} onBack={() => {
+          const ret = chatReturnScreen;
+          setChatReturnScreen("event");
+          if (ret === "notifications") navigateTo("notifications");
+          else navigateTo("event", { event: selectedEvent });
+        }} />
       )}
 
       {(screen === "profile" || screen === "profileView") && (
