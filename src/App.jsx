@@ -779,6 +779,16 @@ export default function App() {
               setShowRating(formatted); navigateTo("explore");
             }
           }}
+          onOpenChat={async (eventId) => {
+            const numId = parseInt(eventId);
+            const found = events.find(e => e.id === numId);
+            if (found) { navigateTo("chat", { event: found }); return; }
+            const { data } = await supabase.from("events").select("*").eq("id", numId).single();
+            if (data) {
+              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: data.host_name, hostId: data.host_id, members: data.members || [], memberNames: data.member_names || [] };
+              navigateTo("chat", { event: formatted });
+            }
+          }}
         />
       )}
 

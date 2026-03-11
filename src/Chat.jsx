@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
+import { sendNotification } from "./notificationHelper";
 
 export default function Chat({ event, user, myName, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -52,7 +53,19 @@ export default function Chat({ event, user, myName, onBack }) {
     const { error } = await supabase.from("messages").insert({
       event_id: event.id, user_id: user.id, user_name: myName, content,
     });
-    if (error) console.error(error);
+    if (error) { console.error(error); return; }
+
+    const otherMembers = (event.members || []).filter(id => id !== user.id);
+    for (const memberId of otherMembers) {
+      const { data: existing } = await supabase.from("notifications")
+        .select("id").eq("user_id", memberId).eq("type", "new_message")
+        .eq("data->>event_id", String(event.id)).eq("read", false).maybeSingle();
+      if (!existing) {
+        await sendNotification(memberId, "new_message", `${myName} · ${event.title}`,
+          content.length > 60 ? content.slice(0, 57) + "…" : content,
+          { event_id: event.id, event_title: event.title });
+      }
+    }
   };
 
   const handleKeyPress = (e) => {

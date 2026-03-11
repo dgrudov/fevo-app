@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
-export default function Notifications({ user, onBack, onNavigate, onRateSquad }) {
+export default function Notifications({ user, onBack, onNavigate, onRateSquad, onOpenChat }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +20,8 @@ export default function Notifications({ user, onBack, onNavigate, onRateSquad })
         .eq("user_id", user.id)
         .eq("read", false)
         .neq("type", "join_request")
-        .neq("type", "rate_squad");
+        .neq("type", "rate_squad")
+        .neq("type", "new_message");
     };
     load();
   }, [user]);
@@ -43,6 +44,7 @@ export default function Notifications({ user, onBack, onNavigate, onRateSquad })
       case "rate_squad": return "⭐";
       case "received_rating": return "⭐";
       case "spot_opened": return "🔔";
+      case "new_message": return "💬";
       default: return "📬";
     }
   };
@@ -76,6 +78,11 @@ export default function Notifications({ user, onBack, onNavigate, onRateSquad })
               onNavigate("explore");
             }
             if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
+            if (n.type === "new_message") {
+              await supabase.from("notifications").update({ read: true }).eq("id", n.id);
+              setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, read: true } : notif));
+              onOpenChat(n.data?.event_id);
+            }
           }} style={{
             padding: "16px 18px", marginBottom: 10, cursor: "pointer",
             borderLeft: n.read ? "none" : "3px solid var(--accent)",
