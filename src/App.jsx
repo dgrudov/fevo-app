@@ -90,6 +90,8 @@ export default function App() {
   const [eventPhotos, setEventPhotos] = useState([]);
   const [photoLightbox, setPhotoLightbox] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(false);
+  const [editEventForm, setEditEventForm] = useState({});
 
   const loadEventPhotos = async (eventId) => {
     const { data } = await supabase.from("event_photos").select("*").eq("event_id", eventId).order("created_at", { ascending: false });
@@ -445,9 +447,13 @@ export default function App() {
           .phone-frame {
             width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh;
             box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 32px 80px rgba(0,0,0,0.9), 0 0 60px rgba(255,87,51,0.06);
-            position: relative; overflow-x: hidden;
+            position: relative;
           }
-          .bottom-nav { border-radius: 0 0 0 0; }
+          .frame-overlay {
+            left: 50% !important; right: auto !important;
+            transform: translateX(-50%) !important;
+            width: 480px !important; max-width: 480px !important;
+          }
         }
       `}</style>
 
@@ -653,17 +659,34 @@ export default function App() {
               <div style={{ fontWeight: 700, color: "#fff" }}>{selectedEvent.host}</div>
               <div style={{ fontSize: 13, color: "var(--text3)" }}>View profile →</div>
             </div>
-            {selectedEvent.hostId === user?.id && (
-              <button className="btn" onClick={async (e) => {
-                e.stopPropagation();
+          </div>
+
+          {selectedEvent.hostId === user?.id && (
+            <div style={{ margin: "12px 16px 0", display: "flex", gap: 8 }}>
+              <button className="btn" onClick={() => {
+                setEditEventForm({
+                  title: selectedEvent.title,
+                  location: selectedEvent.location || "",
+                  vibe: selectedEvent.vibe || "",
+                  maxSize: selectedEvent.maxSize,
+                  timeDate: selectedEvent.time && selectedEvent.time !== "TBD" ? new Date(selectedEvent.time) : null,
+                });
+                setEditingEvent(true);
+              }} style={{ flex: 1, padding: "13px 0", borderRadius: 14, fontSize: 14, fontWeight: 700, background: "var(--bg3)", color: "#fff", border: "1px solid var(--border2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                ✏️ Edit Event
+              </button>
+              <button className="btn" onClick={async () => {
+                if (!window.confirm("Delete this event? This cannot be undone.")) return;
                 const { error } = await supabase.from("events").delete().eq("id", selectedEvent.id);
                 if (error) { console.error(error); return; }
                 setEvents(events.filter(ev => ev.id !== selectedEvent.id));
                 setScreen("explore"); setSelectedEvent(null);
                 setToast("Event deleted"); setTimeout(() => setToast(null), 3000);
-              }} style={{ padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>Delete</button>
-            )}
-          </div>
+              }} style={{ flex: 1, padding: "13px 0", borderRadius: 14, fontSize: 14, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                🗑 Delete
+              </button>
+            </div>
+          )}
 
           <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
@@ -819,7 +842,7 @@ export default function App() {
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>WHEN</label>
-                  <DatePicker selected={createForm.timeDate || null} onChange={date => setCreateForm({ ...createForm, time: date ? date.toISOString() : "", timeDate: date })} showTimeSelect timeFormat="HH:mm" timeIntervals={15} dateFormat="EEE d MMM, HH:mm" minDate={new Date()} placeholderText="Pick a date and time" customInput={<input style={{ width: "100%", cursor: "pointer" }} readOnly />} />
+                  <DatePicker selected={createForm.timeDate || null} onChange={date => setCreateForm({ ...createForm, time: date ? date.toISOString() : "", timeDate: date })} showTimeSelect timeFormat="HH:mm" timeIntervals={15} dateFormat="EEE d MMM, HH:mm" minDate={new Date()} placeholderText="Pick a date and time" popperPlacement="bottom-start" popperProps={{ strategy: "fixed" }} customInput={<input style={{ width: "100%", cursor: "pointer" }} readOnly />} />
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>LOCATION</label>
@@ -970,7 +993,7 @@ export default function App() {
         const isFirst = photoLightbox === 0;
         const isLast = photoLightbox === eventPhotos.length - 1;
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}
+          <div className="frame-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}
             onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               const diff = touchStartX.current - e.changedTouches[0].clientX;
@@ -1023,6 +1046,80 @@ export default function App() {
           </div>
         );
       })()}
+
+      {editingEvent && selectedEvent && (
+        <div className="frame-overlay" style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }} onClick={() => setEditingEvent(false)} />
+          <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "24px 20px 40px", display: "flex", flexDirection: "column", gap: 14, maxHeight: "85vh", overflowY: "auto" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 100, background: "rgba(255,255,255,0.15)", margin: "0 auto 8px" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+              <div style={{ fontSize: 28 }}>{selectedEvent.emoji}</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 18, color: "#fff" }}>Edit Event</div>
+                <div style={{ fontSize: 13, color: "var(--text3)" }}>Changes apply to all squad members</div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text3)", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Title</div>
+              <input value={editEventForm.title || ""} onChange={e => setEditEventForm(f => ({ ...f, title: e.target.value }))} placeholder="Event title" />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text3)", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Date & Time</div>
+              <DatePicker
+                selected={editEventForm.timeDate}
+                onChange={date => setEditEventForm(f => ({ ...f, timeDate: date }))}
+                showTimeSelect timeFormat="HH:mm" timeIntervals={15}
+                dateFormat="d MMM yyyy, HH:mm"
+                minDate={new Date()}
+                popperPlacement="top-start"
+                popperProps={{ strategy: "fixed" }}
+                customInput={<input readOnly value={editEventForm.timeDate ? editEventForm.timeDate.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""} placeholder="Pick date & time" style={{ cursor: "pointer" }} />}
+              />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text3)", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Location</div>
+              <LocationInput value={editEventForm.location || ""} onChange={val => setEditEventForm(f => ({ ...f, location: val }))} placeholder="Where is it?" />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text3)", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Vibe</div>
+              <input value={editEventForm.vibe || ""} onChange={e => setEditEventForm(f => ({ ...f, vibe: e.target.value }))} placeholder="Describe the vibe..." />
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text3)", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 6 }}>Max squad size</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setEditEventForm(f => ({ ...f, maxSize: Math.max((f.maxSize || 2) - 1, selectedEvent.groupSize) }))} style={{ width: 40, height: 40, borderRadius: 10, background: "var(--bg3)", border: "1px solid var(--border2)", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <div style={{ flex: 1, textAlign: "center", fontSize: 18, fontWeight: 800, color: "#fff" }}>{editEventForm.maxSize}</div>
+                <button onClick={() => setEditEventForm(f => ({ ...f, maxSize: Math.min((f.maxSize || 2) + 1, 30) }))} style={{ width: 40, height: 40, borderRadius: 10, background: "var(--bg3)", border: "1px solid var(--border2)", color: "#fff", fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+              </div>
+              {editEventForm.maxSize <= selectedEvent.groupSize && <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 4 }}>Can't go below current squad size ({selectedEvent.groupSize})</div>}
+            </div>
+
+            <button className="btn" onClick={async () => {
+              const updates = {
+                title: editEventForm.title,
+                location: editEventForm.location,
+                vibe: editEventForm.vibe,
+                max_size: editEventForm.maxSize,
+                time: editEventForm.timeDate ? editEventForm.timeDate.toISOString() : selectedEvent.time,
+              };
+              const { error } = await supabase.from("events").update(updates).eq("id", selectedEvent.id);
+              if (error) { console.error(error); return; }
+              const updated = { ...selectedEvent, title: updates.title, location: updates.location, vibe: updates.vibe, maxSize: updates.max_size, time: updates.time };
+              setSelectedEvent(updated);
+              setEvents(events.map(e => e.id === selectedEvent.id ? updated : e));
+              setEditingEvent(false);
+              setToast("Event updated ✓"); setTimeout(() => setToast(null), 3000);
+            }} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none", boxShadow: "0 8px 24px rgba(255,87,51,0.35)", marginTop: 4 }}>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      )}
 
       {showRating && (
         <RatingModal event={showRating} user={user} onClose={async (rated) => {
@@ -1223,7 +1320,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events }
               const isFirst = profilePhotoLightbox === 0;
               const isLast = profilePhotoLightbox === profilePhotos.length - 1;
               return (
-                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}
+                <div className="frame-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}
                   onTouchStart={(e) => { profileTouchStart.current = e.touches[0].clientX; }}
                   onTouchEnd={(e) => {
                     const diff = profileTouchStart.current - e.changedTouches[0].clientX;
