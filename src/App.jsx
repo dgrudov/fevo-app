@@ -485,9 +485,9 @@ export default function App() {
                 border: filterDate === f.key ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent",
               }}>{f.label}</button>
             ))}
-            <label style={{ flexShrink: 0, cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent", display: "flex", alignItems: "center", gap: 5 }}>
+            <label style={{ flexShrink: 0, cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent", display: "flex", alignItems: "center", gap: 5, position: "relative" }}>
               📅 {filterDate === "pick" && filterPickedDate ? new Date(filterPickedDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Pick date"}
-              <input type="date" min={new Date().toISOString().split("T")[0]} onChange={e => { if (e.target.value) { setFilterPickedDate(e.target.value); setFilterDate("pick"); } }} style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }} />
+              <input type="date" min={new Date().toISOString().split("T")[0]} onChange={e => { if (e.target.value) { setFilterPickedDate(e.target.value); setFilterDate("pick"); } }} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
             </label>
           </div>
 
