@@ -148,28 +148,26 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    // Първоначално зареждане на броя известия
     const loadUnread = async () => {
       const { count } = await supabase.from("notifications").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false);
       setUnreadCount(count || 0);
     };
     loadUnread();
 
-   
     const channel = supabase
       .channel('realtime-notifications')
       .on('postgres_changes', {
-        event: 'INSERT', 
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}` 
-      }, (payload) => {
-        setUnreadCount(prev => prev + 1);
-      })
+        event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}`
+      }, () => { setUnreadCount(prev => prev + 1); })
       .subscribe();
+
+    // Re-fetch when app comes back into focus (mobile background/foreground)
+    const handleVisibility = () => { if (document.visibilityState === 'visible') loadUnread(); };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [user]);
 
