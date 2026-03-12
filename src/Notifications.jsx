@@ -26,6 +26,15 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
         .neq("type", "new_message");
     };
     load();
+
+    const channel = supabase
+      .channel("notifications-list")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload) => setNotifications(prev => [payload.new, ...prev])
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
   }, [user]);
 
   const formatTime = (timestamp) => {
