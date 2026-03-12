@@ -29,7 +29,8 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
   }, [user]);
 
   const formatTime = (timestamp) => {
-    const diff = Date.now() - new Date(timestamp);
+    const ts = timestamp.endsWith('Z') || timestamp.includes('+') ? timestamp : timestamp + 'Z';
+    const diff = Date.now() - new Date(ts);
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);

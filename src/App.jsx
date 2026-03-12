@@ -1031,7 +1031,17 @@ export default function App() {
 
                         // 5. Пращаме известие на потребителя
                         await sendNotification(request.user_id, "request_accepted", "Request accepted! 🎉", `You're now in the squad for ${event.emoji} ${event.title}`, { event_id: event.id });
-                        
+
+                        // 6. Notify the new member's buddies
+                        const { data: buddyRows } = await supabase.from("buddy_requests")
+                          .select("requester_id, addressee_id")
+                          .or(`requester_id.eq.${request.user_id},addressee_id.eq.${request.user_id}`)
+                          .eq("status", "accepted");
+                        if (buddyRows && buddyRows.length > 0) {
+                          const buddyIds = buddyRows.map(r => r.requester_id === request.user_id ? r.addressee_id : r.requester_id);
+                          buddyIds.forEach(buddyId => sendNotification(buddyId, "buddy_event", `${request.user_name} is going to ${event.emoji} ${event.title} 👥`, "Want to join them?", { event_id: event.id }));
+                        }
+
                         setTimeout(() => setToast(null), 3000);
                       }} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none" }}>✓ Accept</button>
                       

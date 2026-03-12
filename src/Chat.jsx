@@ -68,8 +68,10 @@ export default function Chat({ event, user, myName, onBack }) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  const formatTime = (timestamp) =>
-    new Date(timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const formatTime = (timestamp) => {
+    const ts = timestamp.endsWith('Z') || timestamp.includes('+') ? timestamp : timestamp + 'Z';
+    return new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  };
 
   return (
     <div style={{
