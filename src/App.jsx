@@ -95,6 +95,7 @@ export default function App() {
   const [editEventForm, setEditEventForm] = useState({});
   const [blockedIds, setBlockedIds] = useState([]);
   const [reportSheet, setReportSheet] = useState(null); // userId being reported
+  const [myBuddyIds, setMyBuddyIds] = useState([]);
 
   const loadEventPhotos = async (eventId) => {
     const { data } = await supabase.from("event_photos").select("*").eq("event_id", eventId).order("created_at", { ascending: false });
@@ -257,6 +258,16 @@ export default function App() {
     if (!user) return;
     supabase.from("blocks").select("blocked_id").eq("blocker_id", user.id)
       .then(({ data }) => { if (data) setBlockedIds(data.map(b => b.blocked_id)); });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("buddy_requests").select("requester_id, addressee_id")
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+      .eq("status", "accepted")
+      .then(({ data }) => {
+        if (data) setMyBuddyIds(data.map(r => r.requester_id === user.id ? r.addressee_id : r.requester_id));
+      });
   }, [user?.id]);
 
   useEffect(() => {
@@ -572,6 +583,7 @@ export default function App() {
                       {event.members.length > 5 && <div className="avatar-ring" style={{ width: 24, height: 24, marginLeft: -8, fontSize: 9, background: "var(--bg4)", border: "2px solid var(--card)", color: "var(--text3)", fontWeight: 700, zIndex: 0 }}>+{event.members.length - 5}</div>}
                     </div>
                     <span style={{ fontSize: 12, color: "var(--text3)" }}>{event.groupSize} joined</span>
+                    {(() => { const n = event.members.filter(id => myBuddyIds.includes(id)).length; return n > 0 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981" }}>· 👥 {n} {n === 1 ? "buddy" : "buddies"}</span> : null; })()}
                   </div>
                   <span style={{ fontSize: 12, fontWeight: 700, color: spotsLeft(event) <= 2 ? "#ef4444" : "#10b981" }}>{spotsLeft(event)} spots left</span>
                 </div>
@@ -692,7 +704,10 @@ export default function App() {
           <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
               <span style={{ fontWeight: 700, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Squad · {selectedEvent.groupSize}/{selectedEvent.maxSize}</span>
-              <span style={{ fontSize: 12, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 700 }}>{spotsLeft(selectedEvent)} open</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {(() => { const n = selectedEvent.members.filter(id => myBuddyIds.includes(id)).length; return n > 0 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "2px 8px" }}>👥 {n} {n === 1 ? "buddy" : "buddies"}</span> : null; })()}
+                <span style={{ fontSize: 12, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 700 }}>{spotsLeft(selectedEvent)} open</span>
+              </div>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 14 }}>
               {(selectedEvent.memberNames && selectedEvent.memberNames.length > 0 ? selectedEvent.memberNames : selectedEvent.members).map((m, i) => {
@@ -887,7 +902,7 @@ export default function App() {
 
       {/* ── NOTIFICATIONS ── */}
       {screen === "notifications" && (
-        <Notifications user={user} onBack={() => navigateTo("explore")} onNavigate={(s) => navigateTo(s)}
+        <Notifications user={user} myName={myName} onBack={() => navigateTo("explore")} onNavigate={(s) => navigateTo(s)} onBuddyUpdate={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))}
           onRateSquad={async (eventId) => {
             const numId = parseInt(eventId);
             const { data: existing } = await supabase.from("ratings").select("id").eq("event_id", numId).eq("rater_id", user.id);
@@ -986,7 +1001,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} />
+        <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1171,7 +1186,7 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, blockedIds = [], onBlock, onUnblock, onReport }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -1182,6 +1197,10 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
   const [profilePhotos, setProfilePhotos] = useState([]);
   const [profilePhotoLightbox, setProfilePhotoLightbox] = useState(null);
   const profileTouchStart = useRef(0);
+  const [buddyRequest, setBuddyRequest] = useState(null);
+  const [buddyCount, setBuddyCount] = useState(0);
+  const [buddyList, setBuddyList] = useState([]);
+  const [buddyLoading, setBuddyLoading] = useState(false);
   const myEvents = allUserEvents.filter(e => e.hostId === user?.id);
   const joinedEvents = allUserEvents.filter(e => e.members.includes(user?.id) && e.hostId !== user?.id);
 
@@ -1223,7 +1242,65 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
       });
     supabase.from("event_photos").select("*").eq("user_id", user.id).eq("show_on_profile", true).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setProfilePhotos(data); });
+    // Buddy count for stats
+    supabase.from("buddy_requests").select("id", { count: "exact", head: true })
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`).eq("status", "accepted")
+      .then(({ count }) => setBuddyCount(count || 0));
+    // Buddy request status (when viewing someone else)
+    if (!isMe && currentUserId) {
+      supabase.from("buddy_requests").select("*")
+        .or(`and(requester_id.eq.${currentUserId},addressee_id.eq.${user.id}),and(requester_id.eq.${user.id},addressee_id.eq.${currentUserId})`)
+        .maybeSingle()
+        .then(({ data }) => setBuddyRequest(data || null));
+    }
+    // Buddy list (my profile only)
+    if (isMe) {
+      supabase.from("buddy_requests").select("requester_id, addressee_id")
+        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`).eq("status", "accepted")
+        .then(async ({ data }) => {
+          if (!data || data.length === 0) { setBuddyList([]); return; }
+          const ids = data.map(r => r.requester_id === user.id ? r.addressee_id : r.requester_id);
+          const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, location").in("id", ids);
+          setBuddyList(profiles || []);
+        });
+    }
   }, [user?.id]);
+
+  const buddyStatus = !buddyRequest ? null
+    : buddyRequest.status === "accepted" ? "accepted"
+    : buddyRequest.requester_id === currentUserId ? "pending_sent" : "pending_received";
+
+  const sendBuddyRequest = async () => {
+    setBuddyLoading(true);
+    const { data } = await supabase.from("buddy_requests").insert({ requester_id: currentUserId, addressee_id: user.id, status: "pending" }).select().single();
+    setBuddyRequest(data);
+    await sendNotification(user.id, "buddy_request", `${myName} wants to be your buddy 👋`, `Tap to accept or decline`, { requester_id: currentUserId });
+    setBuddyLoading(false);
+  };
+  const cancelBuddyRequest = async () => {
+    await supabase.from("buddy_requests").delete().eq("id", buddyRequest.id);
+    setBuddyRequest(null);
+  };
+  const acceptBuddyRequest = async () => {
+    setBuddyLoading(true);
+    await supabase.from("buddy_requests").update({ status: "accepted" }).eq("id", buddyRequest.id);
+    setBuddyRequest({ ...buddyRequest, status: "accepted" });
+    setBuddyCount(c => c + 1);
+    onBuddyChange(user.id, true);
+    await sendNotification(buddyRequest.requester_id, "buddy_accepted", `${myName} accepted your buddy request 🎉`, `You two are now buddies`, { buddy_id: currentUserId });
+    setBuddyLoading(false);
+  };
+  const declineBuddyRequest = async () => {
+    await supabase.from("buddy_requests").delete().eq("id", buddyRequest.id);
+    setBuddyRequest(null);
+  };
+  const removeBuddy = async () => {
+    if (!window.confirm(`Remove ${displayName} from your buddies?`)) return;
+    await supabase.from("buddy_requests").delete().eq("id", buddyRequest.id);
+    setBuddyRequest(null);
+    setBuddyCount(c => Math.max(0, c - 1));
+    onBuddyChange(user.id, false);
+  };
 
   const displayName = isMe ? myName : (profile?.full_name || user?.name || "");
   const displayUsername = isMe ? (myName ? myName.toLowerCase().replace(/\s+/g, "") : "you") : (profile?.username || "");
@@ -1313,7 +1390,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
         <div style={{ display: "flex", marginTop: 20, background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", overflow: "hidden" }}>
           {[
             { val: myEvents.length + joinedEvents.length, label: "Events" },
-            { val: 0, label: "Buddies" },
+            { val: buddyCount, label: "Buddies" },
             { val: profile?.total_ratings > 0 ? `⭐ ${Number(profile.avg_rating).toFixed(1)}` : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating" },
           ].map((stat, i, arr) => (
             <div key={stat.label} style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRight: i < arr.length - 1 ? "1px solid var(--border2)" : "none" }}>
@@ -1323,9 +1400,40 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
           ))}
         </div>
 
+        {/* Buddy button (non-me only) */}
+        {!isMe && (
+          <div style={{ marginTop: 16 }}>
+            {buddyStatus === null && (
+              <button className="btn" onClick={sendBuddyRequest} disabled={buddyLoading} style={{ width: "100%", padding: "13px 0", borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none", boxShadow: "0 6px 20px rgba(255,87,51,0.3)" }}>
+                {buddyLoading ? "Sending..." : "👋 Add Buddy"}
+              </button>
+            )}
+            {buddyStatus === "pending_sent" && (
+              <button className="btn" onClick={cancelBuddyRequest} style={{ width: "100%", padding: "13px 0", borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)" }}>
+                ⏳ Request Sent · Cancel
+              </button>
+            )}
+            {buddyStatus === "pending_received" && (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn" onClick={acceptBuddyRequest} disabled={buddyLoading} style={{ flex: 1, padding: "13px 0", borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", border: "none" }}>
+                  {buddyLoading ? "..." : "✓ Accept"}
+                </button>
+                <button className="btn" onClick={declineBuddyRequest} style={{ flex: 1, padding: "13px 0", borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)" }}>
+                  Decline
+                </button>
+              </div>
+            )}
+            {buddyStatus === "accepted" && (
+              <button className="btn" onClick={removeBuddy} style={{ width: "100%", padding: "13px 0", borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(16,185,129,0.08)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)" }}>
+                ✓ Buddies · Remove
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Tabs */}
         <div style={{ display: "flex", marginTop: 22, background: "var(--bg3)", borderRadius: 12, padding: 4, gap: 4 }}>
-          {[["photos", "📸 Photos"], ["history", "📅 History"]].map(([id, label]) => (
+          {(isMe ? [["photos", "📸 Photos"], ["history", "📅 History"], ["buddies", "👥 Buddies"]] : [["photos", "📸 Photos"], ["history", "📅 History"]]).map(([id, label]) => (
             <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
               flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 700, border: "none",
               background: profileTab === id ? "var(--card)" : "transparent",
@@ -1425,6 +1533,30 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
             </div>
           );
         })()}
+
+        {/* Buddies tab — my profile only */}
+        {profileTab === "buddies" && (
+          <div className="fade-in" style={{ marginTop: 16 }}>
+            {buddyList.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+                <p style={{ fontWeight: 600, color: "var(--text2)" }}>No buddies yet</p>
+                <p style={{ fontSize: 13, marginTop: 4 }}>Add people you meet at events as buddies</p>
+              </div>
+            ) : buddyList.map(b => (
+              <div key={b.id} className="card shadow-sm" style={{ padding: 14, marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+                <div className="avatar-ring" style={{ width: 44, height: 44, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", fontSize: 16, fontWeight: 700, overflow: "hidden", flexShrink: 0 }}>
+                  {b.avatar_url ? <img src={b.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (b.full_name?.[0] || "?").toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{b.full_name}</div>
+                  {b.location && <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>📍 {b.location}</div>}
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "3px 10px" }}>Buddy</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
