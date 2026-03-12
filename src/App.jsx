@@ -7,6 +7,7 @@ import LocationInput from "./LocationInput";
 import Chat from "./Chat";
 import RatingModal from "./RatingModal";
 import { sendNotification } from "./notificationHelper";
+import { subscribeToPush } from "./pushHelper";
 import Notifications from "./Notifications";
 import Onboarding from "./Onboarding";
 
@@ -199,6 +200,7 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
+        subscribeToPush(session.user.id);
         supabase.from("profiles").select("full_name, onboarded, banned, interests").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
             if (!data) return;
@@ -426,7 +428,7 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Auth onLogin={(u, name, isNewUser, banned) => { setIsBanned(false); setUser(u); if (banned) { setIsBanned(true); return; } setMyName(name); if (isNewUser) setShowOnboarding(true); }} />;
+  if (!user) return <Auth onLogin={(u, name, isNewUser, banned) => { setIsBanned(false); setUser(u); if (banned) { setIsBanned(true); return; } setMyName(name); if (isNewUser) setShowOnboarding(true); subscribeToPush(u.id); }} />;
 
   if (isBanned) return (
     <div className="phone-frame" style={{ minHeight: "100vh", background: "#0a0805", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 32px", textAlign: "center" }}>
