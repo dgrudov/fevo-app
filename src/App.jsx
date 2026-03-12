@@ -1470,6 +1470,18 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
                 </a>
               )}
             </div>
+            {profile?.interests?.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 12 }}>
+                {profile.interests.map(interest => {
+                  const cat = [{ label: "Nightlife", emoji: "🪩" }, { label: "Sports", emoji: "🏃" }, { label: "Outdoors", emoji: "🌿" }, { label: "Beach", emoji: "🏖️" }, { label: "Food & Drink", emoji: "🍽️" }, { label: "Culture", emoji: "🎨" }, { label: "Wellness", emoji: "🧘" }, { label: "Travel", emoji: "🚗" }].find(c => c.label === interest);
+                  return (
+                    <span key={interest} style={{ padding: "5px 12px", borderRadius: 100, fontSize: 12, fontWeight: 600, background: "rgba(255,87,51,0.1)", color: "var(--accent)", border: "1px solid rgba(255,87,51,0.2)" }}>
+                      {cat?.emoji} {interest}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
