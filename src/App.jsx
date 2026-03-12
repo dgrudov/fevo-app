@@ -383,6 +383,10 @@ export default function App() {
     setCreateStep(1); setScreen("explore");
     setToast("Event created! 🎉");
     setTimeout(() => setToast(null), 3000);
+    // Notify buddies about new event
+    if (myBuddyIds.length > 0) {
+      supabase.rpc("notify_user_buddies", { p_user_id: user.id, p_type: "buddy_event", p_title: `${myName} is hosting ${formatted.emoji} ${formatted.title} 👥`, p_body: "Want to join them?", p_data: { event_id: formatted.id } });
+    }
   };
 
   const selectedType = ACTIVITY_TYPES.find(t => t.label === createForm.type);
@@ -927,6 +931,16 @@ export default function App() {
               navigateTo("chat", { event: formatted });
             }
           }}
+          onOpenEvent={async (eventId) => {
+            const numId = parseInt(eventId);
+            const found = events.find(e => e.id === numId);
+            if (found) { navigateTo("event", { event: found }); return; }
+            const { data } = await supabase.from("events").select("*").eq("id", numId).single();
+            if (data) {
+              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: data.host_name, hostId: data.host_id, members: data.members || [], memberNames: data.member_names || [] };
+              navigateTo("event", { event: formatted });
+            }
+          }}
         />
       )}
 
@@ -972,6 +986,7 @@ export default function App() {
                         setUnreadCount(prev => Math.max(0, prev - 1));
                         setToast(`${request.user_name} joined the squad! 🎉`);
                         await sendNotification(request.user_id, "request_accepted", "Request accepted! 🎉", `You're now in the squad for ${event.emoji} ${event.title}`, { event_id: event.id });
+                        supabase.rpc("notify_user_buddies", { p_user_id: request.user_id, p_type: "buddy_event", p_title: `${request.user_name} is going to ${event.emoji} ${event.title} 👥`, p_body: "Want to join them?", p_data: { event_id: event.id } });
                         await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request");
                         setTimeout(() => setToast(null), 3000);
                       }} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none" }}>✓ Accept</button>
@@ -1201,6 +1216,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
   const [buddyCount, setBuddyCount] = useState(0);
   const [buddyList, setBuddyList] = useState([]);
   const [buddyLoading, setBuddyLoading] = useState(false);
+  const [showBuddyModal, setShowBuddyModal] = useState(false);
   const myEvents = allUserEvents.filter(e => e.hostId === user?.id);
   const joinedEvents = allUserEvents.filter(e => e.members.includes(user?.id) && e.hostId !== user?.id);
 
@@ -1242,27 +1258,18 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
       });
     supabase.from("event_photos").select("*").eq("user_id", user.id).eq("show_on_profile", true).order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setProfilePhotos(data); });
-    // Buddy count for stats
-    supabase.from("buddy_requests").select("id", { count: "exact", head: true })
-      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`).eq("status", "accepted")
-      .then(({ count }) => setBuddyCount(count || 0));
+    // Buddy count via RPC (works correctly for any profile)
+    supabase.rpc("get_buddy_count", { p_user_id: user.id })
+      .then(({ data }) => setBuddyCount(data || 0));
+    // Buddy list via RPC (works correctly for any profile)
+    supabase.rpc("get_user_buddies", { p_user_id: user.id })
+      .then(({ data }) => setBuddyList(data || []));
     // Buddy request status (when viewing someone else)
     if (!isMe && currentUserId) {
       supabase.from("buddy_requests").select("*")
         .or(`and(requester_id.eq.${currentUserId},addressee_id.eq.${user.id}),and(requester_id.eq.${user.id},addressee_id.eq.${currentUserId})`)
         .maybeSingle()
         .then(({ data }) => setBuddyRequest(data || null));
-    }
-    // Buddy list (my profile only)
-    if (isMe) {
-      supabase.from("buddy_requests").select("requester_id, addressee_id")
-        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`).eq("status", "accepted")
-        .then(async ({ data }) => {
-          if (!data || data.length === 0) { setBuddyList([]); return; }
-          const ids = data.map(r => r.requester_id === user.id ? r.addressee_id : r.requester_id);
-          const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url, location").in("id", ids);
-          setBuddyList(profiles || []);
-        });
     }
   }, [user?.id]);
 
@@ -1389,16 +1396,41 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
 
         <div style={{ display: "flex", marginTop: 20, background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", overflow: "hidden" }}>
           {[
-            { val: myEvents.length + joinedEvents.length, label: "Events" },
-            { val: buddyCount, label: "Buddies" },
-            { val: profile?.total_ratings > 0 ? `⭐ ${Number(profile.avg_rating).toFixed(1)}` : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating" },
+            { val: myEvents.length + joinedEvents.length, label: "Events", onClick: null },
+            { val: buddyCount, label: "Buddies", onClick: buddyCount > 0 ? () => setShowBuddyModal(true) : null },
+            { val: profile?.total_ratings > 0 ? `⭐ ${Number(profile.avg_rating).toFixed(1)}` : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating", onClick: null },
           ].map((stat, i, arr) => (
-            <div key={stat.label} style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRight: i < arr.length - 1 ? "1px solid var(--border2)" : "none" }}>
-              <div className="display" style={{ fontSize: 20, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>{stat.val}</div>
+            <div key={stat.label} onClick={stat.onClick || undefined} style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRight: i < arr.length - 1 ? "1px solid var(--border2)" : "none", cursor: stat.onClick ? "pointer" : "default" }}>
+              <div className="display" style={{ fontSize: 20, fontWeight: 800, color: stat.onClick ? "var(--accent)" : "#fff", letterSpacing: -0.5 }}>{stat.val}</div>
               <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.8 }}>{stat.label}</div>
             </div>
           ))}
         </div>
+
+        {/* Buddy list modal */}
+        {showBuddyModal && (
+          <div className="frame-overlay" style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", flexDirection: "column", justifyContent: "flex-end" }} onClick={() => setShowBuddyModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "0 0 32px", maxHeight: "75vh", display: "flex", flexDirection: "column", border: "1px solid var(--border2)", borderBottom: "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 20px 16px" }}>
+                <h3 className="display" style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>👥 Buddies · {buddyCount}</h3>
+                <button onClick={() => setShowBuddyModal(false)} style={{ background: "var(--bg3)", border: "none", color: "var(--text2)", width: 32, height: 32, borderRadius: "50%", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              </div>
+              <div style={{ overflowY: "auto", padding: "0 16px" }}>
+                {buddyList.map(b => (
+                  <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border2)" }}>
+                    <div className="avatar-ring" style={{ width: 44, height: 44, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", fontSize: 16, fontWeight: 700, overflow: "hidden", flexShrink: 0 }}>
+                      {b.avatar_url ? <img src={b.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (b.full_name?.[0] || "?").toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{b.full_name}</div>
+                      {b.location && <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 1 }}>📍 {b.location}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Buddy button (non-me only) */}
         {!isMe && (

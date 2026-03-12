@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { sendNotification } from "./notificationHelper";
 
-export default function Notifications({ user, myName, onBack, onNavigate, onRateSquad, onOpenChat, onBuddyUpdate }) {
+export default function Notifications({ user, myName, onBack, onNavigate, onRateSquad, onOpenChat, onOpenEvent, onBuddyUpdate }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +45,7 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
       case "request_accepted": return "🎉";
       case "buddy_request": return "👋";
       case "buddy_accepted": return "🎉";
+      case "buddy_event": return "👥";
       case "rate_squad": return "⭐";
       case "received_rating": return "⭐";
       case "spot_opened": return "🔔";
@@ -96,6 +97,11 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
               await supabase.from("notifications").delete().eq("id", n.id);
               setNotifications(prev => prev.filter(notif => notif.id !== n.id));
             }
+            if (n.type === "buddy_event") {
+              await supabase.from("notifications").delete().eq("id", n.id);
+              setNotifications(prev => prev.filter(notif => notif.id !== n.id));
+              if (n.data?.event_id) onOpenEvent(n.data.event_id);
+            }
             if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
             if (n.type === "new_message") {
               await supabase.from("notifications").delete().eq("id", n.id);
@@ -128,6 +134,9 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
                       setNotifications(prev => prev.filter(notif => notif.id !== n.id));
                     }} style={{ flex: 1, padding: "8px 0", borderRadius: 10, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Decline</button>
                   </div>
+                )}
+                {n.type === "buddy_event" && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>Tap to view event →</div>
                 )}
               </div>
               {!n.read && n.type !== "buddy_request" && (
