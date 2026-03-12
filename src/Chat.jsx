@@ -61,6 +61,11 @@ export default function Chat({ event, user, myName, onBack }) {
         p_event_id: event.id,
         p_event_title: event.title,
       });
+      fetch("/api/send-push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: memberId, title: `${event.emoji} ${event.title}`, body: `${myName}: ${content}` }),
+      }).catch(() => {});
     }
   };
 
