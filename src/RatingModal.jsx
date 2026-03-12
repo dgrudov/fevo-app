@@ -2,8 +2,8 @@ import { useState } from "react";
 import { supabase } from "./supabase";
 
 export default function RatingModal({ event, user, onClose }) {
-  const membersToRate = event.members
-    .map((id, i) => ({ id, name: event.memberNames?.[i] || "?" }))
+  const membersToRate = (event.members || [])
+    .map((id, i) => ({ id, name: (event.memberNames || [])[i] || "?" }))
     .filter(m => m.id !== user.id);
 
   const [currentIndex, setCurrentIndex] = useState(0);

@@ -144,12 +144,31 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+
+    // Първоначално зареждане на броя известия
     const loadUnread = async () => {
       const { count } = await supabase.from("notifications").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false);
       setUnreadCount(count || 0);
     };
     loadUnread();
-  }, [user, screen]);
+
+   
+    const channel = supabase
+      .channel('realtime-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT', 
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}` 
+      }, (payload) => {
+        setUnreadCount(prev => prev + 1);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -288,7 +307,7 @@ export default function App() {
       }
     };
     loadRequests();
-  }, [user]);
+  }, [user, screen]);
 
   const filteredEvents = events.filter(e => {
     if (blockedIds.includes(e.hostId)) return false;
@@ -346,19 +365,18 @@ export default function App() {
 
   const handleLeave = async (event) => {
     if (!user) return;
-    const updatedMembers = event.members.filter(m => m !== user.id);
+    const updatedMembers = (event.members || []).filter(m => m !== user.id);
     const updatedNames = (event.memberNames || []).filter(m => m !== myName);
-    const updatedSize = event.groupSize - 1;
+    const updatedSize = Math.max(0, (event.groupSize || 1) - 1);
     const { error } = await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", event.id);
-    if (error) { console.error(error); return; }
+    if (error) { console.error("leave error:", error); setToast("Could not leave event 😔"); setTimeout(() => setToast(null), 3000); return; }
     await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_id", user.id);
     setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
+    setMyRequests(prev => prev.filter(id => id !== event.id));
     setJoined(null); setScreen("explore"); setSelectedEvent(null);
-    setMyRequests(myRequests.filter(id => id !== event.id));
     setToast(`You left "${event.title}"`);
     setTimeout(() => setToast(null), 3000);
   };
-
   const formattedTime = createForm.time ? new Date(createForm.time).toISOString() : "TBD";
   const handleCreate = async () => {
     if (!createForm.title || !myName || !createForm.type || !createForm.time || !createForm.location) return;
@@ -980,26 +998,51 @@ export default function App() {
                     </div>
                     <div style={{ display: "flex", gap: 10 }}>
                       <button className="btn" onClick={async () => {
+                        // 1. Подготвяме новите данни за участниците
                         const updatedMembers = [...(event.members || []), request.user_id];
                         const updatedNames = [...(event.memberNames || []), request.user_name];
-                        const updatedSize = event.groupSize + 1;
-                        await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", event.id);
+                        const updatedSize = (event.groupSize || 0) + 1;
+
+                        // 2. Обновяваме таблицата 'events' директно
+                        const { error: updateError } = await supabase
+                          .from("events")
+                          .update({
+                            members: updatedMembers,
+                            member_names: updatedNames,
+                            group_size: updatedSize
+                          })
+                          .eq("id", event.id);
+
+                        if (updateError) {
+                          console.error("Update Error:", updateError);
+                          setToast("Error updating event ❌");
+                          return;
+                        }
+
+                        // 3. Отбелязваме заявката като приета и трием известието
                         await supabase.from("join_requests").update({ status: "accepted" }).eq("id", request.id);
+                        await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request").filter("data->>event_id", "eq", request.event_id).filter("data->>user_id", "eq", request.user_id);
+
+                        // 4. Обновяваме UI локално
                         setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
                         setJoinRequests(joinRequests.filter(r => r.id !== request.id));
                         setUnreadCount(prev => Math.max(0, prev - 1));
                         setToast(`${request.user_name} joined the squad! 🎉`);
+
+                        // 5. Пращаме известие на потребителя
                         await sendNotification(request.user_id, "request_accepted", "Request accepted! 🎉", `You're now in the squad for ${event.emoji} ${event.title}`, { event_id: event.id });
-                        supabase.rpc("notify_user_buddies", { p_user_id: request.user_id, p_type: "buddy_event", p_title: `${request.user_name} is going to ${event.emoji} ${event.title} 👥`, p_body: "Want to join them?", p_data: { event_id: event.id } });
-                        await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request");
+                        
                         setTimeout(() => setToast(null), 3000);
                       }} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none" }}>✓ Accept</button>
+                      
                       <button className="btn" onClick={async () => {
+                        // При отказ: трием заявката и известието
                         await supabase.from("join_requests").update({ status: "declined" }).eq("id", request.id);
-                        await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request");
+                        await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request").filter("data->>event_id", "eq", request.event_id).filter("data->>user_id", "eq", request.user_id);
                         setJoinRequests(joinRequests.filter(r => r.id !== request.id));
                         setUnreadCount(prev => Math.max(0, prev - 1));
-                        setToast("Request declined"); setTimeout(() => setToast(null), 3000);
+                        setToast("Request declined"); 
+                        setTimeout(() => setToast(null), 3000);
                       }} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>✕ Decline</button>
                     </div>
                   </div>
