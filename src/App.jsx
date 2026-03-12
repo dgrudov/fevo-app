@@ -384,9 +384,13 @@ export default function App() {
     setToast("Event created! 🎉");
     setTimeout(() => setToast(null), 3000);
     // Notify buddies about new event
-    if (myBuddyIds.length > 0) {
-      supabase.rpc("notify_user_buddies", { p_user_id: user.id, p_type: "buddy_event", p_title: `${myName} is hosting ${formatted.emoji} ${formatted.title} 👥`, p_body: "Want to join them?", p_data: { event_id: formatted.id } });
-    }
+    supabase.from("buddy_requests").select("requester_id, addressee_id")
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`).eq("status", "accepted")
+      .then(({ data: buddyRows }) => {
+        if (!buddyRows || buddyRows.length === 0) return;
+        const buddyIds = buddyRows.map(r => r.requester_id === user.id ? r.addressee_id : r.requester_id);
+        buddyIds.forEach(buddyId => sendNotification(buddyId, "buddy_event", `${myName} is hosting ${formatted.emoji} ${formatted.title} 👥`, "Want to join them?", { event_id: formatted.id }));
+      });
   };
 
   const selectedType = ACTIVITY_TYPES.find(t => t.label === createForm.type);
@@ -1465,7 +1469,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
 
         {/* Tabs */}
         <div style={{ display: "flex", marginTop: 22, background: "var(--bg3)", borderRadius: 12, padding: 4, gap: 4 }}>
-          {(isMe ? [["photos", "📸 Photos"], ["history", "📅 History"], ["buddies", "👥 Buddies"]] : [["photos", "📸 Photos"], ["history", "📅 History"]]).map(([id, label]) => (
+          {[["photos", "📸 Photos"], ["history", "📅 History"]].map(([id, label]) => (
             <button key={id} className="btn" onClick={() => setProfileTab(id)} style={{
               flex: 1, padding: "9px 0", borderRadius: 9, fontSize: 13, fontWeight: 700, border: "none",
               background: profileTab === id ? "var(--card)" : "transparent",
@@ -1584,7 +1588,6 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{b.full_name}</div>
                   {b.location && <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>📍 {b.location}</div>}
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "3px 10px" }}>Buddy</span>
               </div>
             ))}
           </div>
