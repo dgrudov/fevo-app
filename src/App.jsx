@@ -11,6 +11,7 @@ import Notifications from "./Notifications";
 import Onboarding from "./Onboarding";
 
 const ACTIVITY_CATEGORIES = [
+  { label: "For You", emoji: "✨" },
   { label: "All", emoji: "🌍" },
   { label: "Nightlife", emoji: "🪩" },
   { label: "Outdoors", emoji: "🌿" },
@@ -61,7 +62,8 @@ const ACTIVITY_TYPES = [
 export default function App() {
   const [screen, setScreen] = useState("explore");
   const [events, setEvents] = useState([]);
-  const [filterCat, setFilterCat] = useState("All");
+  const [filterCat, setFilterCat] = useState("For You");
+  const [myInterests, setMyInterests] = useState([]);
   const [filterDate, setFilterDate] = useState("all");
   const [filterPickedDate, setFilterPickedDate] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -197,11 +199,12 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
-        supabase.from("profiles").select("full_name, onboarded, banned").eq("id", session.user.id).maybeSingle()
+        supabase.from("profiles").select("full_name, onboarded, banned, interests").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
             if (!data) return;
             if (data.banned === true) { setIsBanned(true); return; }
             setMyName(data.full_name || "");
+            setMyInterests(data.interests || []);
             if (!data.onboarded) setShowOnboarding(true);
           });
       }
@@ -311,7 +314,11 @@ export default function App() {
 
   const filteredEvents = events.filter(e => {
     if (blockedIds.includes(e.hostId)) return false;
-    if (filterCat !== "All" && e.category !== filterCat) return false;
+    if (filterCat === "For You") {
+      if (myInterests.length > 0 && !myInterests.includes(e.category)) return false;
+    } else if (filterCat !== "All") {
+      if (e.category !== filterCat) return false;
+    }
     if (filterDate === "all") return true;
     if (!e.time || e.time === "TBD") return false;
     const t = new Date(e.time);
@@ -432,8 +439,9 @@ export default function App() {
   );
 
   if (showOnboarding) return (
-    <Onboarding onFinish={async () => {
-      await supabase.from("profiles").update({ onboarded: true }).eq("id", user.id);
+    <Onboarding onFinish={async (interests) => {
+      await supabase.from("profiles").update({ onboarded: true, interests }).eq("id", user.id);
+      setMyInterests(interests);
       setShowOnboarding(false);
     }} />
   );
@@ -560,11 +568,13 @@ export default function App() {
             {filteredEvents.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
                 <div style={{ fontSize: 48, marginBottom: 16, filter: "grayscale(0.3)" }}>
-                  {filterDate !== "all" ? "📅" : filterCat !== "All" ? "🔍" : "🌍"}
+                  {filterCat === "For You" ? "✨" : filterDate !== "all" ? "📅" : filterCat !== "All" ? "🔍" : "🌍"}
                 </div>
                 <p className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text2)", marginBottom: 8 }}>No events found</p>
                 <p style={{ fontSize: 14, color: "var(--text3)", lineHeight: 1.5 }}>
-                  {filterDate !== "all" && filterCat !== "All"
+                  {filterCat === "For You"
+                    ? "No events matching your interests right now"
+                    : filterDate !== "all" && filterCat !== "All"
                     ? `No ${filterCat.toLowerCase()} events ${filterDate === "today" ? "today" : filterDate === "tomorrow" ? "tomorrow" : filterDate === "weekend" ? "this weekend" : "this week"}`
                     : filterDate !== "all"
                     ? `Nothing planned ${filterDate === "today" ? "today" : filterDate === "tomorrow" ? "tomorrow" : filterDate === "weekend" ? "this weekend" : "this week"} — be the first to create one!`
@@ -572,8 +582,8 @@ export default function App() {
                     ? `No ${filterCat.toLowerCase()} events yet — why not host one?`
                     : "No upcoming events yet — be the first to create one!"}
                 </p>
-                <button className="btn" onClick={() => { setFilterDate("all"); setFilterCat("All"); setFilterPickedDate(null); }} style={{ marginTop: 20, padding: "10px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>
-                  Clear filters
+                <button className="btn" onClick={() => { setFilterDate("all"); setFilterCat(filterCat === "For You" ? "All" : "All"); setFilterPickedDate(null); }} style={{ marginTop: 20, padding: "10px 22px", borderRadius: 100, fontSize: 13, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+                  {filterCat === "For You" ? "Browse all events →" : "Clear filters"}
                 </button>
               </div>
             )}
@@ -1073,7 +1083,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} />
+        <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1258,14 +1268,14 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [allUserEvents, setAllUserEvents] = useState([]);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "", age: "", instagram: "" });
+  const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "", age: "", instagram: "", interests: [] });
   const [profilePhotos, setProfilePhotos] = useState([]);
   const [profilePhotoLightbox, setProfilePhotoLightbox] = useState(null);
   const profileTouchStart = useRef(0);
@@ -1292,10 +1302,11 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
   };
 
   const saveProfile = async () => {
-    const { error } = await supabase.from("profiles").update({ full_name: editForm.full_name, bio: editForm.bio, location: editForm.location, age: editForm.age ? parseInt(editForm.age) : null, instagram: editForm.instagram }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ full_name: editForm.full_name, bio: editForm.bio, location: editForm.location, age: editForm.age ? parseInt(editForm.age) : null, instagram: editForm.instagram, interests: editForm.interests }).eq("id", user.id);
     if (error) { console.error(error); return; }
     setProfile({ ...profile, ...editForm });
     if (editForm.full_name && editForm.full_name !== myName) setMyName(editForm.full_name);
+    setMyInterests(editForm.interests);
     setEditing(false);
   };
 
@@ -1306,7 +1317,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
         if (data) {
           setProfile(data);
           if (data.avatar_url) setAvatarUrl(data.avatar_url);
-          setEditForm({ full_name: data.full_name || "", bio: data.bio || "", location: data.location || "", age: data.age || "", instagram: data.instagram || "" });
+          setEditForm({ full_name: data.full_name || "", bio: data.bio || "", location: data.location || "", age: data.age || "", instagram: data.instagram || "", interests: data.interests || [] });
         }
       });
     supabase.from("events").select("*").order("created_at", { ascending: false })
@@ -1428,6 +1439,17 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, joined, events, 
             <input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} placeholder="Your city" />
             <input value={editForm.age} onChange={e => setEditForm({ ...editForm, age: e.target.value })} placeholder="Your age" type="number" min="16" max="99" />
             <input value={editForm.instagram} onChange={e => setEditForm({ ...editForm, instagram: e.target.value.replace("@", "") })} placeholder="Instagram username (without @)" />
+            <div>
+              <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>INTERESTS</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {[{ label: "Nightlife", emoji: "🪩" }, { label: "Sports", emoji: "🏃" }, { label: "Outdoors", emoji: "🌿" }, { label: "Beach", emoji: "🏖️" }, { label: "Food & Drink", emoji: "🍽️" }, { label: "Culture", emoji: "🎨" }, { label: "Wellness", emoji: "🧘" }, { label: "Travel", emoji: "🚗" }].map(cat => {
+                  const selected = editForm.interests.includes(cat.label);
+                  return (
+                    <button key={cat.label} onClick={() => setEditForm({ ...editForm, interests: selected ? editForm.interests.filter(i => i !== cat.label) : [...editForm.interests, cat.label] })} style={{ padding: "7px 13px", borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: "pointer", border: selected ? "1.5px solid var(--accent)" : "1.5px solid var(--border2)", background: selected ? "rgba(255,87,51,0.15)" : "var(--bg3)", color: selected ? "var(--accent)" : "var(--text2)", transition: "all 0.15s" }}>{cat.emoji} {cat.label}</button>
+                  );
+                })}
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button className="btn" onClick={saveProfile} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none" }}>Save</button>
               <button className="btn" onClick={() => setEditing(false)} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "var(--bg3)", color: "var(--text2)", border: "1px solid var(--border2)" }}>Cancel</button>
