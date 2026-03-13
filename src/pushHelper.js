@@ -17,10 +17,8 @@ export async function subscribeToPush(userId) {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
 
-    // Unsubscribe first to clear any stale subscription, then resubscribe
     const existing = await reg.pushManager.getSubscription();
-    if (existing) await existing.unsubscribe();
-    const sub = await reg.pushManager.subscribe({
+    const sub = existing || await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
