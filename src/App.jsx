@@ -461,7 +461,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId: data.id, category: newEvent.category, hostId: user.id, title: createForm.title, emoji: typeData.emoji }),
-      }).catch(() => {});
+      }).then(r => r.json()).then(d => console.log("[notify-new-event]", d)).catch(e => console.error("[notify-new-event]", e));
     }
     // Notify buddies about new event
     supabase.from("buddy_requests").select("requester_id, addressee_id")
