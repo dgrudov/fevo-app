@@ -66,9 +66,22 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-  const { userId, title, body } = req.body;
+  const { userId, title, body, eventId } = req.body;
   if (!userId || !title) return res.status(400).json({ error: 'Missing fields' });
   try {
+    // If eventId provided (chat message), skip push if unread notification already exists
+    if (eventId) {
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('type', 'new_message')
+        .eq('read', false)
+        .filter('data->>event_id', 'eq', String(eventId))
+        .maybeSingle();
+      if (existing) return res.status(200).json({ ok: true, skipped: true });
+    }
+
     const { data: subs, error } = await supabase.from('push_subscriptions').select('subscription').eq('user_id', userId);
     if (error) return res.status(500).json({ error: error.message });
     if (!subs || subs.length === 0) return res.status(200).json({ ok: true, sent: 0 });

@@ -24,8 +24,8 @@ export async function subscribeToPush(userId) {
     });
 
     await supabase.from('push_subscriptions').upsert(
-      { user_id: userId, subscription: sub.toJSON() },
-      { onConflict: 'user_id' }
+      { user_id: userId, endpoint: sub.endpoint, subscription: sub.toJSON() },
+      { onConflict: 'user_id,endpoint' }
     );
   } catch (err) {
     console.error('Push subscription failed:', err);

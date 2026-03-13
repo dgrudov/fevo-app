@@ -56,28 +56,16 @@ export default function Chat({ event, user, myName, onBack }) {
 
     const otherMembers = (event.members || []).filter(id => id !== user.id);
     for (const memberId of otherMembers) {
-      // Check if member already has an unread chat notification for this event
-      const { data: existing } = await supabase
-        .from("notifications")
-        .select("id")
-        .eq("user_id", memberId)
-        .eq("type", "new_message")
-        .eq("read", false)
-        .filter("data->>event_id", "eq", String(event.id))
-        .maybeSingle();
-
       await supabase.rpc("notify_chat_member", {
         p_member_id: memberId,
         p_event_id: event.id,
         p_event_title: event.title,
       });
-
-      // Only push if no unread chat notification exists yet for this event
-      if (!existing && location.hostname !== "localhost") {
+      if (location.hostname !== "localhost") {
         fetch("/api/send-push", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: memberId, title: `${event.emoji} ${event.title}`, body: `${myName}: ${content}` }),
+          body: JSON.stringify({ userId: memberId, title: `${event.emoji} ${event.title}`, body: `${myName}: ${content}`, eventId: event.id }),
         }).catch(() => {});
       }
     }
