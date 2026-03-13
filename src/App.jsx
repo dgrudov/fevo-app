@@ -24,6 +24,15 @@ const ACTIVITY_CATEGORIES = [
   { label: "Travel", emoji: "✈️" },
 ];
 
+const BG_CITIES = [
+  "Sofia", "Plovdiv", "Varna", "Burgas", "Stara Zagora", "Ruse", "Pleven",
+  "Sliven", "Dobrich", "Shumen", "Pernik", "Haskovo", "Yambol", "Pazardzhik",
+  "Blagoevgrad", "Veliko Tarnovo", "Vratsa", "Gabrovo", "Vidin", "Montana",
+  "Kardzhali", "Kyustendil", "Lovech", "Targovishte", "Razgrad", "Silistra",
+  "Smolyan", "Popovo", "Samokov", "Sandanski",
+];
+
+
 const ACTIVITY_TYPES = [
   { label: "Disco / Club", emoji: "🪩", category: "Nightlife", color: "#FF3CAC" },
   { label: "Bar Crawl", emoji: "🍻", category: "Nightlife", color: "#F7971E" },
@@ -206,12 +215,13 @@ export default function App() {
       if (session) {
         setUser(session.user);
         subscribeToPush(session.user.id);
-        supabase.from("profiles").select("full_name, onboarded, banned, interests, bio, avatar_url").eq("id", session.user.id).maybeSingle()
+        supabase.from("profiles").select("full_name, onboarded, banned, interests, bio, avatar_url, location").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
             if (!data) return;
             if (data.banned === true) { setIsBanned(true); return; }
             setMyName(data.full_name || "");
             setMyInterests(data.interests || []);
+
             if (!data.onboarded) setShowOnboarding(true);
             if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
           });
@@ -656,6 +666,7 @@ export default function App() {
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
                   <span className="chip">🕐 {event.time && event.time !== "TBD" ? new Date(event.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : event.time}</span>
                   <span className="chip">📍 {event.location}</span>
+
                   {event.vibe && <span className="chip">✨ {event.vibe}</span>}
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -965,7 +976,7 @@ export default function App() {
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>LOCATION</label>
-                  <LocationInput value={createForm.location} onChange={val => setCreateForm({ ...createForm, location: val })} placeholder="Search for a location" />
+                  <LocationInput value={createForm.location} onChange={val => setCreateForm(f => ({ ...f, location: val }))} placeholder="Search for a location" />
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>VIBE / DESCRIPTION</label>
@@ -982,6 +993,7 @@ export default function App() {
                   <div style={{ color: "var(--text3)", fontSize: 13, display: "flex", gap: 10 }}>
                     <span>🕐 {createForm.time && createForm.time !== "TBD" ? new Date(createForm.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "TBD"}</span>
                     <span>📍 {createForm.location || "TBD"}</span>
+
                   </div>
                 </div>
                 <div>
@@ -993,7 +1005,7 @@ export default function App() {
                   <select value={createForm.maxSize} onChange={e => setCreateForm({ ...createForm, maxSize: e.target.value })}>{[4, 6, 8, 10, 12, 15, 20, 30].map(n => <option key={n} value={n}>Up to {n} people</option>)}</select>
                 </div>
                 {(!createForm.title || !createForm.time || !createForm.location) && (
-                  <p style={{ textAlign: "center", fontSize: 13, color: "var(--text3)" }}>{!createForm.title ? "Add a title to continue" : !createForm.time ? "Pick a date and time to continue" : "Add a location to continue"}</p>
+                  <p style={{ textAlign: "center", fontSize: 13, color: "var(--text3)" }}>{!createForm.title ? "Add a title to continue" : !createForm.time ? "Pick a date and time to continue" : "Add a venue to continue"}</p>
                 )}
                 <button className="btn" onClick={handleCreate} disabled={!createForm.title || !createForm.time || !createForm.location} style={{ padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700, background: (!createForm.title || !createForm.time || !createForm.location) ? "var(--bg4)" : "linear-gradient(135deg, var(--accent), var(--accent2))", color: (!createForm.title || !createForm.time || !createForm.location) ? "var(--text3)" : "#fff", boxShadow: (!createForm.title || !createForm.time || !createForm.location) ? "none" : "0 8px 24px rgba(255,87,51,0.35)", cursor: (!createForm.title || !createForm.time || !createForm.location) ? "not-allowed" : "pointer" }}>Publish Event ✨</button>
                 <button className="btn" onClick={() => setCreateStep(2)} style={{ padding: 12, background: "none", fontSize: 14, color: "var(--text3)" }}>← Back</button>
@@ -1463,6 +1475,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   const [showBuddyModal, setShowBuddyModal] = useState(false);
   const [showUpRate, setShowUpRate] = useState(null);
   const [showLevelInfo, setShowLevelInfo] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
   const myEvents = allUserEvents.filter(e => e.hostId === user?.id);
   const joinedEvents = allUserEvents.filter(e => e.members.includes(user?.id) && e.hostId !== user?.id);
 
@@ -1621,7 +1634,44 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <input value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} placeholder="Your name" />
             <textarea value={editForm.bio} onChange={e => setEditForm({ ...editForm, bio: e.target.value })} placeholder="Write a short bio..." rows={3} style={{ resize: "none" }} />
-            <input value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} placeholder="Your city" />
+            <div style={{ position: "relative" }}>
+              {showCityPicker && (
+                <div onClick={() => setShowCityPicker(false)} style={{ position: "fixed", inset: 0, zIndex: 49 }} />
+              )}
+              <button type="button" onClick={() => setShowCityPicker(v => !v)} style={{
+                width: "100%", padding: "12px 14px", borderRadius: 12, border: "1.5px solid rgba(255,120,60,0.12)",
+                background: "#1a1510", color: editForm.location ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
+                fontSize: 15, fontFamily: "inherit", textAlign: "left", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                transition: "border 0.2s",
+              }}>
+                <span>🏙 {editForm.location || "Select your city"}</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginLeft: 8 }}>{showCityPicker ? "▲" : "▼"}</span>
+              </button>
+              {showCityPicker && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50,
+                  background: "#1a1510", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)",
+                  boxShadow: "0 12px 40px rgba(0,0,0,0.6)", maxHeight: 240, overflowY: "auto",
+                }}>
+                  {BG_CITIES.map((c, i) => (
+                    <div key={c} onMouseDown={() => { setEditForm(f => ({ ...f, location: c })); setShowCityPicker(false); }} style={{
+                      padding: "11px 16px", fontSize: 14, cursor: "pointer",
+                      color: editForm.location === c ? "var(--accent)" : "rgba(255,255,255,0.8)",
+                      fontWeight: editForm.location === c ? 700 : 400,
+                      background: editForm.location === c ? "rgba(255,87,51,0.08)" : "transparent",
+                      borderBottom: i < BG_CITIES.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                      transition: "background 0.12s",
+                    }}
+                      onMouseEnter={e => { if (editForm.location !== c) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = editForm.location === c ? "rgba(255,87,51,0.08)" : "transparent"; }}
+                    >
+                      {editForm.location === c ? "✓ " : ""}{c}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <input value={editForm.age} onChange={e => setEditForm({ ...editForm, age: e.target.value })} placeholder="Your age" type="number" min="16" max="99" />
             <input value={editForm.instagram} onChange={e => setEditForm({ ...editForm, instagram: e.target.value.replace("@", "") })} placeholder="Instagram username (without @)" />
             <div>
