@@ -42,7 +42,7 @@ export default function LocationInput({ value, onChange, placeholder }) {
     debounceRef.current = setTimeout(() => {
       if (!serviceRef.current) return;
       serviceRef.current.getPlacePredictions(
-        { input: query, types: ["establishment", "geocode"] },
+        { input: query, types: ["establishment", "geocode"], componentRestrictions: { country: "bg" } },
         (results, status) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
             setSuggestions(results);
