@@ -455,6 +455,14 @@ export default function App() {
     setCreateStep(1); setScreen("explore");
     setToast("Event created! 🎉");
     setTimeout(() => setToast(null), 3000);
+    // Notify users with matching interests (only on prod to avoid spamming real users during dev)
+    if (location.hostname !== "localhost") {
+      fetch("/api/notify-new-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: data.id, category: newEvent.category, hostId: user.id, title: createForm.title, emoji: typeData.emoji }),
+      }).catch(() => {});
+    }
     // Notify buddies about new event
     supabase.from("buddy_requests").select("requester_id, addressee_id")
       .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`).eq("status", "accepted")
