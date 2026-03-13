@@ -99,6 +99,9 @@ export default function App() {
   const [blockedIds, setBlockedIds] = useState([]);
   const [reportSheet, setReportSheet] = useState(null); // userId being reported
   const [myBuddyIds, setMyBuddyIds] = useState([]);
+  const [confirmationPrompt, setConfirmationPrompt] = useState(null);
+  const [eventConfirmations, setEventConfirmations] = useState([]);
+  const [memberActionSheet, setMemberActionSheet] = useState(null); // { id, name }
 
   const loadEventPhotos = async (eventId) => {
     const { data } = await supabase.from("event_photos").select("*").eq("event_id", eventId).order("created_at", { ascending: false });
@@ -264,6 +267,11 @@ export default function App() {
         .map(e => ({ ...e, members: e.members || [], memberNames: e.member_names || [] }))
         .filter(e => e.time && e.time !== "TBD" && new Date(e.time) < now && e.members.includes(user.id) && e.members.length > 1);
       for (const event of passedEvents) {
+        // Auto-insert attendance for all members (showed_up=true by default, host can correct later)
+        const rows = (event.members || []).map(uid => ({ event_id: event.id, user_id: uid, showed_up: true }));
+        if (rows.length > 0) {
+          await supabase.from("attendance").upsert(rows, { onConflict: "event_id,user_id", ignoreDuplicates: true });
+        }
         const { data: existing } = await supabase.from("ratings").select("id").eq("event_id", event.id).eq("rater_id", user.id);
         if (existing && existing.length === 0) {
           const { data: existingNotif } = await supabase.from("notifications").select("id").eq("user_id", user.id).eq("type", "rate_squad").eq("data->>event_id", String(event.id));
@@ -275,6 +283,30 @@ export default function App() {
     };
     checkRatingNotifications();
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user || events.length === 0) return;
+    const checkConfirmations = async () => {
+      const now = new Date();
+      const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      const upcoming = events.filter(e => {
+        if (!e.time || e.time === "TBD") return false;
+        const t = new Date(e.time);
+        return t > now && t <= in2h && (e.members || []).includes(user.id);
+      });
+      for (const event of upcoming) {
+        const { data } = await supabase.from("event_confirmations").select("response").eq("event_id", event.id).eq("user_id", user.id).maybeSingle();
+        if (!data) { setConfirmationPrompt(event); return; }
+      }
+    };
+    checkConfirmations();
+  }, [events, user?.id]);
+
+  useEffect(() => {
+    if (!selectedEvent?.id) return;
+    supabase.from("event_confirmations").select("user_id, response").eq("event_id", selectedEvent.id)
+      .then(({ data }) => setEventConfirmations(data || []));
+  }, [selectedEvent?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -738,23 +770,42 @@ export default function App() {
           )}
 
           <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontWeight: 700, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Squad · {selectedEvent.groupSize}/{selectedEvent.maxSize}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {(() => { const n = selectedEvent.members.filter(id => myBuddyIds.includes(id)).length; return n > 0 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "2px 8px" }}>👥 {n} {n === 1 ? "buddy" : "buddies"}</span> : null; })()}
-                <span style={{ fontSize: 12, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 700 }}>{spotsLeft(selectedEvent)} open</span>
-              </div>
-            </div>
+            {(() => {
+              const isUpcoming = selectedEvent.time && new Date(selectedEvent.time) > new Date();
+              const confirmedCount = eventConfirmations.filter(c => c.response === "coming").length;
+              return (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Squad · {selectedEvent.groupSize}/{selectedEvent.maxSize}</span>
+                    {isUpcoming && confirmedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "2px 8px" }}>✅ {confirmedCount} confirmed</span>}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {(() => { const n = selectedEvent.members.filter(id => myBuddyIds.includes(id)).length; return n > 0 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "2px 8px" }}>👥 {n} {n === 1 ? "buddy" : "buddies"}</span> : null; })()}
+                    <span style={{ fontSize: 12, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 700 }}>{spotsLeft(selectedEvent)} open</span>
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 14 }}>
               {(selectedEvent.memberNames && selectedEvent.memberNames.length > 0 ? selectedEvent.memberNames : selectedEvent.members).map((m, i) => {
                 const memberId = selectedEvent.members[i];
                 const isCurrentUser = memberId === user?.id;
+                const isHost = selectedEvent.hostId === user?.id;
+                const isUpcoming = selectedEvent.time && new Date(selectedEvent.time) > new Date();
+                const conf = isUpcoming ? eventConfirmations.find(c => c.user_id === memberId) : null;
                 return (
-                  <div key={i} onClick={() => isCurrentUser ? navigateTo("profile") : navigateTo("profileView", { user: { id: memberId, name: m } })} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg3)", border: "1px solid var(--border2)", borderRadius: 100, padding: "4px 10px 4px 4px", cursor: "pointer" }}>
+                  <div key={i}
+                    onClick={() => {
+                      if (isHost && !isCurrentUser) { setMemberActionSheet({ id: memberId, name: m }); return; }
+                      isCurrentUser ? navigateTo("profile") : navigateTo("profileView", { user: { id: memberId, name: m } });
+                    }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg3)", border: `1px solid ${conf?.response === "coming" ? "rgba(16,185,129,0.3)" : conf?.response === "not_coming" ? "rgba(239,68,68,0.3)" : "var(--border2)"}`, borderRadius: 100, padding: "4px 10px 4px 4px", cursor: "pointer" }}>
                     <div className="avatar-ring" style={{ width: 24, height: 24, background: selectedEvent.color + "55", color: "#fff", fontSize: 9, fontWeight: 800, overflow: "hidden" }}>
                       {avatarCache[memberId] ? <img src={avatarCache[memberId]} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : m[0].toUpperCase()}
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text2)" }}>{m}</span>
+                    {conf?.response === "coming" && <span style={{ fontSize: 11 }}>✅</span>}
+                    {conf?.response === "not_coming" && <span style={{ fontSize: 11 }}>❌</span>}
                   </div>
                 );
               })}
@@ -1240,8 +1291,64 @@ export default function App() {
         </div>
       )}
 
+      {memberActionSheet && selectedEvent && (
+        <div onClick={() => setMemberActionSheet(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#161009", borderRadius: "20px 20px 0 0", border: "1px solid rgba(255,255,255,0.06)", borderBottom: "none", padding: "20px 16px 36px" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.1)", margin: "0 auto 20px" }} />
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 16, paddingLeft: 4 }}>{memberActionSheet.name}</div>
+            <button onClick={() => { navigateTo("profileView", { user: { id: memberActionSheet.id, name: memberActionSheet.name } }); setMemberActionSheet(null); }}
+              style={{ width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15, fontWeight: 600, background: "var(--bg3)", color: "#fff", border: "1px solid var(--border2)", cursor: "pointer", textAlign: "left", marginBottom: 10 }}>
+              👤 View Profile
+            </button>
+            <button onClick={async () => {
+              const updatedMembers = selectedEvent.members.filter(id => id !== memberActionSheet.id);
+              const updatedNames = (selectedEvent.memberNames || []).filter((_, i) => selectedEvent.members[i] !== memberActionSheet.id);
+              const updatedSize = updatedMembers.length;
+              await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", selectedEvent.id);
+              const updated = { ...selectedEvent, members: updatedMembers, memberNames: updatedNames, groupSize: updatedSize };
+              setSelectedEvent(updated);
+              setEvents(prev => prev.map(e => e.id === selectedEvent.id ? updated : e));
+              await sendNotification(memberActionSheet.id, "removed_from_event", "Removed from event", `You were removed from ${selectedEvent.emoji} ${selectedEvent.title}`, { event_id: selectedEvent.id });
+              setMemberActionSheet(null);
+            }} style={{ width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15, fontWeight: 600, background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", cursor: "pointer", textAlign: "left" }}>
+              🚫 Remove from event
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmationPrompt && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px" }}>
+          <div style={{ width: "100%", maxWidth: 420, background: "#161009", borderRadius: 24, border: "1px solid rgba(255,255,255,0.06)", padding: "24px 20px 20px" }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 44, marginBottom: 10 }}>{confirmationPrompt.emoji}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>{confirmationPrompt.title}</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 6 }}>
+                ⏰ Starts in {Math.round((new Date(confirmationPrompt.time) - new Date()) / 60000)} min — still coming?
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button onClick={async () => {
+                await supabase.from("event_confirmations").upsert({ event_id: confirmationPrompt.id, user_id: user.id, response: "coming" }, { onConflict: "event_id,user_id" });
+                setEventConfirmations(prev => [...prev.filter(c => c.user_id !== user.id), { user_id: user.id, response: "coming" }]);
+                setConfirmationPrompt(null);
+              }} style={{ width: "100%", padding: 14, borderRadius: 14, fontSize: 16, fontWeight: 700, background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", border: "none", cursor: "pointer", boxShadow: "0 6px 20px rgba(16,185,129,0.3)" }}>
+                I'm in! 🙌
+              </button>
+              <button onClick={async () => {
+                await supabase.from("event_confirmations").upsert({ event_id: confirmationPrompt.id, user_id: user.id, response: "not_coming" }, { onConflict: "event_id,user_id" });
+                setEventConfirmations(prev => [...prev.filter(c => c.user_id !== user.id), { user_id: user.id, response: "not_coming" }]);
+                setConfirmationPrompt(null);
+              }} style={{ width: "100%", padding: 14, borderRadius: 14, fontSize: 16, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", cursor: "pointer" }}>
+                Can't make it 😕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showRating && (
-        <RatingModal event={showRating} user={user} onClose={async (rated) => {
+        <RatingModal event={showRating} user={user} isHost={showRating?.hostId === user?.id} onClose={async (rated) => {
           if (rated) {
             await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "rate_squad").eq("data->>event_id", String(showRating.id));
             setUnreadCount(prev => Math.max(0, prev - 1));
@@ -1284,6 +1391,8 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   const [buddyList, setBuddyList] = useState([]);
   const [buddyLoading, setBuddyLoading] = useState(false);
   const [showBuddyModal, setShowBuddyModal] = useState(false);
+  const [showUpRate, setShowUpRate] = useState(null);
+  const [showLevelInfo, setShowLevelInfo] = useState(false);
   const myEvents = allUserEvents.filter(e => e.hostId === user?.id);
   const joinedEvents = allUserEvents.filter(e => e.members.includes(user?.id) && e.hostId !== user?.id);
 
@@ -1332,6 +1441,12 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
     // Buddy list via RPC (works correctly for any profile)
     supabase.rpc("get_user_buddies", { p_user_id: user.id })
       .then(({ data }) => setBuddyList(data || []));
+    // Show-up rate from attendance table
+    supabase.from("attendance").select("showed_up").eq("user_id", user.id)
+      .then(({ data }) => {
+        if (data?.length > 0) setShowUpRate(Math.round(data.filter(r => r.showed_up).length / data.length * 100));
+        else setShowUpRate(null);
+      });
     // Buddy request status (when viewing someone else)
     if (!isMe && currentUserId) {
       supabase.from("buddy_requests").select("*")
@@ -1458,7 +1573,32 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
         ) : (
           <div>
             <h2 className="display" style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.3, color: "#fff" }}>{profile?.full_name || displayName}</h2>
-            <p style={{ color: "var(--text3)", fontSize: 13, marginTop: 2 }}>@{displayUsername}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+              <p style={{ color: "var(--text3)", fontSize: 13, margin: 0 }}>@{displayUsername}</p>
+              {(() => {
+                const attended = profile?.events_attended || 0;
+                const level = attended >= 30 ? { icon: "👑", name: "Legend" } : attended >= 15 ? { icon: "🔥", name: "Regular" } : attended >= 5 ? { icon: "⚡", name: "Active" } : { icon: "🌱", name: "New" };
+                const levelDesc = { "New": "Just getting started — welcome to the squad!", "Active": "You show up regularly and people know your face.", "Regular": "A trusted member of the community — always there.", "Legend": "You are the scene. Everyone wants you at their event." };
+                return (
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 9px", borderRadius: 100, background: "rgba(255,87,51,0.12)", border: "1px solid rgba(255,87,51,0.25)", color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
+                      {level.icon} {level.name}
+                    </span>
+                    <button onClick={() => setShowLevelInfo(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "0 2px", lineHeight: 1 }}>ⓘ</button>
+                    {showLevelInfo && (
+                      <div onClick={() => setShowLevelInfo(false)} style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 50, background: "#1a1510", border: "1px solid rgba(255,87,51,0.25)", borderRadius: 12, padding: "12px 14px", width: 220, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+                        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>{levelDesc[level.name]}</div>
+                        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+                          {[{ icon: "🌱", name: "New" }, { icon: "⚡", name: "Active" }, { icon: "🔥", name: "Regular" }, { icon: "👑", name: "Legend" }].map(l => (
+                            <div key={l.name} style={{ fontSize: 12, color: l.name === level.name ? "var(--accent)" : "rgba(255,255,255,0.35)", fontWeight: l.name === level.name ? 700 : 400 }}>{l.icon} {l.name}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
             {profile?.bio && <p style={{ fontSize: 14, color: "var(--text2)", marginTop: 8, lineHeight: 1.6 }}>{profile.bio}</p>}
             <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
               {profile?.location && <span style={{ fontSize: 12, color: "var(--text3)" }}>📍 {profile.location}</span>}
@@ -1485,17 +1625,28 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
           </div>
         )}
 
-        <div style={{ display: "flex", marginTop: 20, background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 20 }}>
           {[
-            { val: myEvents.length + joinedEvents.length, label: "Events", onClick: null },
-            { val: buddyCount, label: "Buddies", onClick: buddyCount > 0 ? () => setShowBuddyModal(true) : null },
-            { val: profile?.total_ratings > 0 ? `⭐ ${Number(profile.avg_rating).toFixed(1)}` : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating", onClick: null },
-          ].map((stat, i, arr) => (
-            <div key={stat.label} onClick={stat.onClick || undefined} style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRight: i < arr.length - 1 ? "1px solid var(--border2)" : "none", cursor: stat.onClick ? "pointer" : "default" }}>
-              <div className="display" style={{ fontSize: 20, fontWeight: 800, color: stat.onClick ? "var(--accent)" : "#fff", letterSpacing: -0.5 }}>{stat.val}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.8 }}>{stat.label}</div>
+            { icon: "🎪", val: profile?.events_attended || 0, label: "Attended" },
+            { icon: "🎤", val: profile?.events_hosted || 0, label: "Hosted" },
+            { icon: "✅", val: showUpRate !== null ? `${showUpRate}%` : "—", label: "Show-up rate" },
+            { icon: "⭐", val: profile?.total_ratings > 0 ? Number(profile.avg_rating).toFixed(1) : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating", onClick: null },
+          ].map(stat => (
+            <div key={stat.label} style={{ background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", padding: "16px 14px" }}>
+              <div style={{ fontSize: 22, marginBottom: 6 }}>{stat.icon}</div>
+              <div className="display" style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: -0.5, lineHeight: 1 }}>{stat.val}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, marginTop: 4, textTransform: "uppercase", letterSpacing: 0.8 }}>{stat.label}</div>
             </div>
           ))}
+        </div>
+        <div onClick={buddyCount > 0 ? () => setShowBuddyModal(true) : undefined} style={{ marginTop: 10, background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: buddyCount > 0 ? "pointer" : "default" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>👥</span>
+            <div>
+              <div className="display" style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: -0.3 }}>{buddyCount} {buddyCount === 1 ? "Buddy" : "Buddies"}</div>
+            </div>
+          </div>
+          {buddyCount > 0 && <span style={{ fontSize: 13, color: "var(--text3)" }}>View →</span>}
         </div>
 
         {/* Buddy list modal */}
