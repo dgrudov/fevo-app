@@ -56,11 +56,7 @@ export default function Chat({ event, user, myName, onBack }) {
 
     const otherMembers = (event.members || []).filter(id => id !== user.id);
     for (const memberId of otherMembers) {
-      await supabase.rpc("notify_chat_member", {
-        p_member_id: memberId,
-        p_event_id: event.id,
-        p_event_title: event.title,
-      });
+      // Push BEFORE RPC — so server check sees the previous unread notification, not this one
       if (location.hostname !== "localhost") {
         fetch("/api/send-push", {
           method: "POST",
@@ -68,6 +64,11 @@ export default function Chat({ event, user, myName, onBack }) {
           body: JSON.stringify({ userId: memberId, title: `${event.emoji} ${event.title}`, body: `${myName}: ${content}`, eventId: event.id }),
         }).catch(() => {});
       }
+      await supabase.rpc("notify_chat_member", {
+        p_member_id: memberId,
+        p_event_id: event.id,
+        p_event_title: event.title,
+      });
     }
   };
 
