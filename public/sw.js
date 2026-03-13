@@ -3,9 +3,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Fevo', {
       body: data.body || '',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      vibrate: [200, 100, 200],
+vibrate: [200, 100, 200],
       data: { url: '/' },
     })
   );
