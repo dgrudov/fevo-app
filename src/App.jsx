@@ -102,6 +102,9 @@ export default function App() {
   const [confirmationPrompt, setConfirmationPrompt] = useState(null);
   const [eventConfirmations, setEventConfirmations] = useState([]);
   const [memberActionSheet, setMemberActionSheet] = useState(null); // { id, name }
+  const [buddySuggestions, setBuddySuggestions] = useState(null); // [{ id, name, rating }]
+  const [profileNudgeDismissed, setProfileNudgeDismissed] = useState(() => sessionStorage.getItem("nudge_dismissed") === "1");
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
 
   const loadEventPhotos = async (eventId) => {
     const { data } = await supabase.from("event_photos").select("*").eq("event_id", eventId).order("created_at", { ascending: false });
@@ -202,13 +205,14 @@ export default function App() {
       if (session) {
         setUser(session.user);
         subscribeToPush(session.user.id);
-        supabase.from("profiles").select("full_name, onboarded, banned, interests").eq("id", session.user.id).maybeSingle()
+        supabase.from("profiles").select("full_name, onboarded, banned, interests, bio, avatar_url").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
             if (!data) return;
             if (data.banned === true) { setIsBanned(true); return; }
             setMyName(data.full_name || "");
             setMyInterests(data.interests || []);
             if (!data.onboarded) setShowOnboarding(true);
+            if (!data.bio && !data.avatar_url) setProfileIncomplete(true);
           });
       }
       setAuthReady(true);
@@ -559,6 +563,17 @@ export default function App() {
           </div>
 
           <div className="glow-line" style={{ marginTop: 14, marginBottom: 0 }} />
+
+          {profileIncomplete && !profileNudgeDismissed && (
+            <div style={{ margin: "12px 20px 0", padding: "12px 14px", borderRadius: 14, background: "rgba(255,87,51,0.07)", border: "1px solid rgba(255,87,51,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>✏️</span>
+              <div style={{ flex: 1, cursor: "pointer" }} onClick={() => navigateTo("profile")}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Complete your profile</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>Add a bio & photo so people know who's coming</div>
+              </div>
+              <button onClick={() => { setProfileNudgeDismissed(true); sessionStorage.setItem("nudge_dismissed", "1"); }} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 18, cursor: "pointer", padding: "0 4px", flexShrink: 0 }}>×</button>
+            </div>
+          )}
 
           <div style={{ overflowX: "auto", padding: "12px 20px 0", display: "flex", gap: 8, width: "100%", maxWidth: "100%" }}>
             {ACTIVITY_CATEGORIES.map(cat => (
@@ -1348,13 +1363,67 @@ export default function App() {
       )}
 
       {showRating && (
-        <RatingModal event={showRating} user={user} isHost={showRating?.hostId === user?.id} onClose={async (rated) => {
+        <RatingModal event={showRating} user={user} isHost={showRating?.hostId === user?.id} onClose={async (rated, ratingData) => {
           if (rated) {
             await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "rate_squad").eq("data->>event_id", String(showRating.id));
             setUnreadCount(prev => Math.max(0, prev - 1));
+            if (ratingData?.ratings && ratingData?.members) {
+              const suggestions = ratingData.members
+                .filter(m => (ratingData.ratings[m.id] || 0) >= 4 && !myBuddyIds.includes(m.id))
+                .map(m => ({ id: m.id, name: m.name, rating: ratingData.ratings[m.id] }));
+              if (suggestions.length > 0) setBuddySuggestions(suggestions);
+            }
           }
           setShowRating(null);
         }} />
+      )}
+
+      {buddySuggestions && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px" }}>
+          <div style={{ width: "100%", maxWidth: 420, background: "#161009", borderRadius: 24, border: "1px solid rgba(255,255,255,0.06)", padding: "28px 20px 24px" }}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🎉</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>Great connections!</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 6 }}>You vibed well with these people — add them as buddies?</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+              {buddySuggestions.map(m => (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                    {m.name?.[0]?.toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{"⭐".repeat(m.rating)}</div>
+                  </div>
+                  <button onClick={async () => {
+                    const { data } = await supabase.from("buddy_requests").insert({ requester_id: user.id, addressee_id: m.id, status: "pending" }).select().single();
+                    if (data) {
+                      await sendNotification(m.id, "buddy_request", `${myName} wants to be your buddy 👋`, `You met at a Fevo event`, { requester_id: user.id });
+                      setMyBuddyIds(prev => [...prev, m.id]);
+                      setBuddySuggestions(prev => {
+                        const next = prev.filter(s => s.id !== m.id);
+                        if (next.length === 0) {
+                          setToast(`Buddy request sent to ${m.name} 👋`);
+                          setTimeout(() => setToast(null), 3000);
+                          return null;
+                        }
+                        setToast(`Buddy request sent to ${m.name} 👋`);
+                        setTimeout(() => setToast(null), 2500);
+                        return next;
+                      });
+                    }
+                  }} style={{ padding: "8px 14px", borderRadius: 100, fontSize: 13, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none", cursor: "pointer", flexShrink: 0 }}>
+                    + Buddy
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setBuddySuggestions(null)} style={{ width: "100%", padding: 13, borderRadius: 14, fontSize: 15, fontWeight: 600, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}>
+              Maybe later
+            </button>
+          </div>
+        </div>
       )}
 
       {toast && (

@@ -45,7 +45,7 @@ export default function RatingModal({ event, user, isHost, onClose }) {
       await supabase.rpc("update_user_rating", { target_user_id: member.id, new_rating: r });
     }
     setSubmitting(false);
-    onClose(true);
+    onClose(true, { ratings: finalRatings, members: membersToRate });
   };
 
   const goNext = async (rating) => {
