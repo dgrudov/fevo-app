@@ -72,19 +72,21 @@ export default async function handler(req, res) {
   if (error) return res.status(500).json({ error: error.message });
   if (!subs?.length) return res.status(200).json({ error: 'No subscription found for this user' });
 
-  const subscription = subs[0].subscription;
   const { VAPID_PUBLIC_KEY: pubKey, VAPID_PRIVATE_KEY: privKey } = process.env;
 
   try {
-    const encrypted = encryptPayload(subscription, JSON.stringify({ title: 'Test push!', body: 'If you see this, push works.' }));
-    const jwt = makeVapidJWT(subscription.endpoint, privKey);
-    const result = await postToEndpoint(subscription.endpoint, {
-      'Content-Type': 'application/octet-stream',
-      'Content-Encoding': 'aes128gcm',
-      'TTL': '86400',
-      'Authorization': `vapid t=${jwt},k=${pubKey}`,
-    }, encrypted);
-    res.status(200).json({ pushStatus: result.status, pushResponse: result.body, endpoint: subscription.endpoint.slice(0, 60) });
+    const results = await Promise.all(subs.map(async ({ subscription }) => {
+      const encrypted = encryptPayload(subscription, JSON.stringify({ title: 'Test push!', body: 'If you see this, push works.' }));
+      const jwt = makeVapidJWT(subscription.endpoint, privKey);
+      const result = await postToEndpoint(subscription.endpoint, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'TTL': '86400',
+        'Authorization': `vapid t=${jwt},k=${pubKey}`,
+      }, encrypted);
+      return { status: result.status, endpoint: subscription.endpoint.slice(0, 50) };
+    }));
+    res.status(200).json({ subscriptionCount: subs.length, results });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
