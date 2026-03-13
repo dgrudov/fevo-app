@@ -678,7 +678,12 @@ export default function App() {
                       {event.members.length > 5 && <div className="avatar-ring" style={{ width: 24, height: 24, marginLeft: -8, fontSize: 9, background: "var(--bg4)", border: "2px solid var(--card)", color: "var(--text3)", fontWeight: 700, zIndex: 0 }}>+{event.members.length - 5}</div>}
                     </div>
                     <span style={{ fontSize: 12, color: "var(--text3)" }}>{event.groupSize} joined</span>
-                    {(() => { const n = event.members.filter(id => myBuddyIds.includes(id)).length; return n > 0 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981" }}>· 👥 {n} {n === 1 ? "buddy" : "buddies"}</span> : null; })()}
+                    {(() => {
+                      const buddies = event.members.map((id, i) => ({ id, name: (event.memberNames?.[i] || "").split(" ")[0] })).filter(m => myBuddyIds.includes(m.id));
+                      if (!buddies.length) return null;
+                      const label = buddies.length === 1 ? `${buddies[0].name} is going` : buddies.length === 2 ? `${buddies[0].name} & ${buddies[1].name} are going` : `${buddies[0].name} & ${buddies.length - 1} others are going`;
+                      return <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 100, padding: "2px 8px" }}>👥 {label}</span>;
+                    })()}
                   </div>
                   <span style={{ fontSize: 12, fontWeight: 700, color: spotsLeft(event) <= 2 ? "#ef4444" : "#10b981" }}>{spotsLeft(event)} spots left</span>
                 </div>
@@ -807,7 +812,12 @@ export default function App() {
                     {isUpcoming && confirmedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "2px 8px" }}>✅ {confirmedCount} confirmed</span>}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {(() => { const n = selectedEvent.members.filter(id => myBuddyIds.includes(id)).length; return n > 0 ? <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "2px 8px" }}>👥 {n} {n === 1 ? "buddy" : "buddies"}</span> : null; })()}
+                    {(() => {
+                      const buddies = selectedEvent.members.map((id, i) => ({ id, name: (selectedEvent.memberNames?.[i] || "").split(" ")[0] })).filter(m => myBuddyIds.includes(m.id));
+                      if (!buddies.length) return null;
+                      const label = buddies.length === 1 ? `${buddies[0].name} is going` : buddies.length === 2 ? `${buddies[0].name} & ${buddies[1].name} are going` : `${buddies[0].name} & ${buddies.length - 1} others are going`;
+                      return <span style={{ fontSize: 11, fontWeight: 700, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 100, padding: "2px 8px" }}>👥 {label}</span>;
+                    })()}
                     <span style={{ fontSize: 12, color: spotsLeft(selectedEvent) <= 2 ? "#ef4444" : "#10b981", fontWeight: 700 }}>{spotsLeft(selectedEvent)} open</span>
                   </div>
                 </div>
@@ -895,28 +905,54 @@ export default function App() {
             </div>
           )}
 
-          <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
-            <p style={{ fontWeight: 700, marginBottom: 14, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Join this squad</p>
-            {selectedEvent.members.includes(user?.id) ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)", textAlign: "center" }}>✓ You're in this squad</div>
-                <button className="btn" onClick={() => handleLeave(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>Leave Event</button>
+          {(() => {
+            const isPast = selectedEvent.time && selectedEvent.time !== "TBD" && new Date(selectedEvent.time) < new Date();
+            if (isPast) {
+              const wasAttending = selectedEvent.members.includes(user?.id);
+              return (
+                <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
+                  <div style={{ display: "flex", align: "center", gap: 10, marginBottom: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--text3)" }}>Event closed</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 100, padding: "1px 8px" }}>Ended</span>
+                  </div>
+                  {wasAttending ? (
+                    <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(16,185,129,0.08)", color: "#10b981", border: "1px solid rgba(16,185,129,0.15)", textAlign: "center" }}>
+                      ✓ You were part of this squad
+                    </div>
+                  ) : (
+                    <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 14, fontWeight: 600, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", textAlign: "center", lineHeight: 1.5 }}>
+                      This event has already happened.<br />
+                      <span style={{ fontSize: 12, fontWeight: 400 }}>Check explore for upcoming events</span>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return (
+              <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
+                <p style={{ fontWeight: 700, marginBottom: 14, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Join this squad</p>
+                {selectedEvent.members.includes(user?.id) ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)", textAlign: "center" }}>✓ You're in this squad</div>
+                    <button className="btn" onClick={() => handleLeave(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>Leave Event</button>
+                  </div>
+                ) : selectedEvent.hostId === user?.id && selectedEvent.members.includes(user?.id) ? (
+                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", textAlign: "center" }}>👑 You're the host</div>
+                ) : spotsLeft(selectedEvent) <= 0 ? (
+                  <div>
+                    <button disabled style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "none", marginBottom: 10 }}>Event is Full 😔</button>
+                    <button className="btn" onClick={() => { setToast("We'll notify you if a spot opens up 🔔"); setTimeout(() => setToast(null), 3000); }} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>🔔 Notify Me When a Spot Opens</button>
+                  </div>
+                ) : selectedEvent.hostId === user?.id ? (
+                  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>👑 Rejoin Your Event</button>
+                ) : myRequests.includes(selectedEvent.id) ? (
+                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)", textAlign: "center" }}>⏳ Request Pending</div>
+                ) : (
+                  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Request to Join 🙌</button>
+                )}
               </div>
-            ) : selectedEvent.hostId === user?.id && selectedEvent.members.includes(user?.id) ? (
-              <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", textAlign: "center" }}>👑 You're the host</div>
-            ) : spotsLeft(selectedEvent) <= 0 ? (
-              <div>
-                <button disabled style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "none", marginBottom: 10 }}>Event is Full 😔</button>
-                <button className="btn" onClick={() => { setToast("We'll notify you if a spot opens up 🔔"); setTimeout(() => setToast(null), 3000); }} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>🔔 Notify Me When a Spot Opens</button>
-              </div>
-            ) : selectedEvent.hostId === user?.id ? (
-              <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>👑 Rejoin Your Event</button>
-            ) : myRequests.includes(selectedEvent.id) ? (
-              <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)", textAlign: "center" }}>⏳ Request Pending</div>
-            ) : (
-              <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Request to Join 🙌</button>
-            )}
-          </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1919,32 +1955,51 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
           </div>
         )}
 
-        {/* History tab — hosted + joined merged */}
+        {/* History tab — upcoming + past */}
         {profileTab === "history" && (() => {
+          const now = new Date();
           const allEvents = [
             ...myEvents.map(e => ({ ...e, role: "hosted" })),
             ...joinedEvents.map(e => ({ ...e, role: "joined" })),
           ].sort((a, b) => new Date(b.time) - new Date(a.time));
+          const upcomingEvents = allEvents.filter(e => e.time && e.time !== "TBD" && new Date(e.time) >= now);
+          const pastEvents = allEvents.filter(e => !e.time || e.time === "TBD" || new Date(e.time) < now);
+
+          const EventRow = ({ e }) => (
+            <div className="card shadow-sm" style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center" }}>
+              <div style={{ width: 46, height: 46, borderRadius: 13, fontSize: 21, display: "flex", alignItems: "center", justifyContent: "center", background: `${e.color || "var(--accent)"}18`, border: `1px solid ${e.color || "var(--accent)"}25`, flexShrink: 0 }}>{e.emoji}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.title}</div>
+                <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 3 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "TBD"} · {e.groupSize} people</div>
+              </div>
+              <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, borderRadius: 100, padding: "3px 10px", background: e.role === "hosted" ? "rgba(255,87,51,0.12)" : "rgba(16,185,129,0.1)", color: e.role === "hosted" ? "var(--accent)" : "#10b981", border: `1px solid ${e.role === "hosted" ? "rgba(255,87,51,0.2)" : "rgba(16,185,129,0.2)"}` }}>
+                {e.role === "hosted" ? "Hosted" : "Joined"}
+              </span>
+            </div>
+          );
+
+          if (allEvents.length === 0) return (
+            <div className="fade-in" style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
+              <p style={{ fontWeight: 600, color: "var(--text2)" }}>No events yet</p>
+              <p style={{ fontSize: 13, marginTop: 4 }}>Events you host or join will appear here</p>
+            </div>
+          );
+
           return (
             <div className="fade-in" style={{ marginTop: 16 }}>
-              {allEvents.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text3)" }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-                  <p style={{ fontWeight: 600, color: "var(--text2)" }}>No events yet</p>
-                  <p style={{ fontSize: 13, marginTop: 4 }}>Events you host or join will appear here</p>
-                </div>
-              ) : allEvents.map((e, i) => (
-                <div key={i} className="card shadow-sm" style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 13, fontSize: 21, display: "flex", alignItems: "center", justifyContent: "center", background: `${e.color || "var(--accent)"}18`, border: `1px solid ${e.color || "var(--accent)"}25`, flexShrink: 0 }}>{e.emoji}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.title}</div>
-                    <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 3 }}>{e.time && e.time !== "TBD" ? new Date(e.time).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "TBD"} · {e.groupSize} people</div>
-                  </div>
-                  <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, borderRadius: 100, padding: "3px 10px", background: e.role === "hosted" ? "rgba(255,87,51,0.12)" : "rgba(16,185,129,0.1)", color: e.role === "hosted" ? "var(--accent)" : "#10b981", border: `1px solid ${e.role === "hosted" ? "rgba(255,87,51,0.2)" : "rgba(16,185,129,0.2)"}` }}>
-                    {e.role === "hosted" ? "Hosted" : "Joined"}
-                  </span>
-                </div>
-              ))}
+              {upcomingEvents.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10 }}>Upcoming</div>
+                  {upcomingEvents.map((e, i) => <EventRow key={i} e={e} />)}
+                </>
+              )}
+              {pastEvents.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10, marginTop: upcomingEvents.length > 0 ? 20 : 0 }}>Past</div>
+                  {pastEvents.map((e, i) => <EventRow key={i} e={e} />)}
+                </>
+              )}
             </div>
           );
         })()}
