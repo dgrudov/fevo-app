@@ -103,6 +103,7 @@ export default function App() {
   const [eventConfirmations, setEventConfirmations] = useState([]);
   const [memberActionSheet, setMemberActionSheet] = useState(null); // { id, name }
   const [buddySuggestions, setBuddySuggestions] = useState(null); // [{ id, name, rating }]
+  const [profileViewReturn, setProfileViewReturn] = useState("event");
   const [profileNudgeDismissed, setProfileNudgeDismissed] = useState(() => sessionStorage.getItem("nudge_dismissed") === "1");
   const [profileIncomplete, setProfileIncomplete] = useState(false);
 
@@ -188,7 +189,7 @@ export default function App() {
       if (current === "event") { setScreen("explore"); setSelectedEvent(null); }
       else if (current === "create") { setScreen("explore"); setCreateStep(1); }
       else if (current === "profile") { setScreen("explore"); }
-      else if (current === "profileView") { setScreen("event"); }
+      else if (current === "profileView") { setScreen(profileViewReturn); }
       else if (current === "chat") { setScreen("event"); }
       else if (current === "requests") { setScreen("explore"); }
       else if (current === "notifications") { setScreen("explore"); }
@@ -196,7 +197,7 @@ export default function App() {
     };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
-  }, [screen]);
+  }, [screen, profileViewReturn]);
 
   useEffect(() => {
     // Only check banned/onboarded on existing session load (returning users)
@@ -1149,7 +1150,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? "event" : "explore")} myName={myName} setMyName={setMyName} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} />
+        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1444,7 +1445,7 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -1647,7 +1648,12 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
               {(() => {
                 const attended = profile?.events_attended || 0;
                 const level = attended >= 30 ? { icon: "👑", name: "Legend" } : attended >= 15 ? { icon: "🔥", name: "Regular" } : attended >= 5 ? { icon: "⚡", name: "Active" } : { icon: "🌱", name: "New" };
-                const levelDesc = { "New": "Just getting started — welcome to the squad!", "Active": "You show up regularly and people know your face.", "Regular": "A trusted member of the community — always there.", "Legend": "You are the scene. Everyone wants you at their event." };
+                const tiers = [
+                  { icon: "🌱", name: "New", min: 0, desc: "First steps. Explore what's happening around you." },
+                  { icon: "⚡", name: "Active", min: 5, desc: "You're in the game. People are starting to recognise you." },
+                  { icon: "🔥", name: "Regular", min: 15, desc: "A familiar face. Hosts love seeing you on the list." },
+                  { icon: "👑", name: "Legend", min: 30, desc: "You are the scene. Events feel different when you're there." },
+                ];
                 return (
                   <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                     <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 9px", borderRadius: 100, background: "rgba(255,87,51,0.12)", border: "1px solid rgba(255,87,51,0.25)", color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
@@ -1655,14 +1661,27 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
                     </span>
                     <button onClick={() => setShowLevelInfo(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "0 2px", lineHeight: 1 }}>ⓘ</button>
                     {showLevelInfo && (
-                      <div onClick={() => setShowLevelInfo(false)} style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 50, background: "#1a1510", border: "1px solid rgba(255,87,51,0.25)", borderRadius: 12, padding: "12px 14px", width: 220, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
-                        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>{levelDesc[level.name]}</div>
-                        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
-                          {[{ icon: "🌱", name: "New" }, { icon: "⚡", name: "Active" }, { icon: "🔥", name: "Regular" }, { icon: "👑", name: "Legend" }].map(l => (
-                            <div key={l.name} style={{ fontSize: 12, color: l.name === level.name ? "var(--accent)" : "rgba(255,255,255,0.35)", fontWeight: l.name === level.name ? 700 : 400 }}>{l.icon} {l.name}</div>
-                          ))}
+                      <>
+                        <div onClick={() => setShowLevelInfo(false)} style={{ position: "fixed", inset: 0, zIndex: 49 }} />
+                        <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 50, background: "#1a1510", border: "1px solid rgba(255,87,51,0.25)", borderRadius: 12, padding: "12px 14px", width: 240, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Reputation levels</div>
+                          {tiers.map(t => {
+                            const isCurrent = t.name === level.name;
+                            return (
+                              <div key={t.name} style={{ display: "flex", gap: 10, marginBottom: 10, opacity: isCurrent ? 1 : 0.4 }}>
+                                <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{t.icon}</span>
+                                <div>
+                                  <div style={{ fontSize: 12, fontWeight: isCurrent ? 700 : 500, color: isCurrent ? "var(--accent)" : "rgba(255,255,255,0.7)", lineHeight: 1.3 }}>{t.name}{isCurrent ? " · you" : ""}</div>
+                                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.4, marginTop: 2 }}>{t.desc}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div style={{ marginTop: 4, fontSize: 11, color: "rgba(255,255,255,0.2)", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+                            {level.name === "Legend" ? "You've reached the top." : `${tiers[tiers.findIndex(t => t.name === level.name) + 1].min - attended} more events to ${tiers[tiers.findIndex(t => t.name === level.name) + 1].name}`}
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 );
@@ -1694,17 +1713,19 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 16 }}>
           {[
             { icon: "🎪", val: profile?.events_attended || 0, label: "Attended" },
             { icon: "🎤", val: profile?.events_hosted || 0, label: "Hosted" },
-            { icon: "✅", val: showUpRate !== null ? `${showUpRate}%` : "—", label: "Show-up rate" },
-            { icon: "⭐", val: profile?.total_ratings > 0 ? Number(profile.avg_rating).toFixed(1) : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating", onClick: null },
+            { icon: "✅", val: showUpRate !== null ? `${showUpRate}%` : "—", label: "Show-up" },
+            { icon: "⭐", val: profile?.total_ratings > 0 ? Number(profile.avg_rating).toFixed(1) : "—", label: profile?.total_ratings > 0 ? `${profile.total_ratings} ratings` : "Rating" },
           ].map(stat => (
-            <div key={stat.label} style={{ background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", padding: "16px 14px" }}>
-              <div style={{ fontSize: 22, marginBottom: 6 }}>{stat.icon}</div>
-              <div className="display" style={{ fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: -0.5, lineHeight: 1 }}>{stat.val}</div>
-              <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, marginTop: 4, textTransform: "uppercase", letterSpacing: 0.8 }}>{stat.label}</div>
+            <div key={stat.label} style={{ background: "var(--bg3)", borderRadius: 14, border: "1px solid var(--border2)", padding: "11px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>{stat.icon}</span>
+              <div>
+                <div className="display" style={{ fontSize: 20, fontWeight: 800, color: "#fff", letterSpacing: -0.5, lineHeight: 1 }}>{stat.val}</div>
+                <div style={{ fontSize: 10, color: "var(--text3)", fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.7 }}>{stat.label}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -1728,7 +1749,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
               </div>
               <div style={{ overflowY: "auto", padding: "0 16px" }}>
                 {buddyList.map(b => (
-                  <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border2)" }}>
+                  <div key={b.id} onClick={() => { setShowBuddyModal(false); onNavigateProfile({ id: b.id, name: b.full_name }); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border2)", cursor: "pointer" }}>
                     <div className="avatar-ring" style={{ width: 44, height: 44, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", fontSize: 16, fontWeight: 700, overflow: "hidden", flexShrink: 0 }}>
                       {b.avatar_url ? <img src={b.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (b.full_name?.[0] || "?").toUpperCase()}
                     </div>
@@ -1736,6 +1757,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
                       <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{b.full_name}</div>
                       {b.location && <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 1 }}>📍 {b.location}</div>}
                     </div>
+                    <span style={{ fontSize: 13, color: "var(--text3)" }}>→</span>
                   </div>
                 ))}
               </div>
