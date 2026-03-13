@@ -213,7 +213,7 @@ export default function App() {
             setMyName(data.full_name || "");
             setMyInterests(data.interests || []);
             if (!data.onboarded) setShowOnboarding(true);
-            if (!data.bio && !data.avatar_url) setProfileIncomplete(true);
+            if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
           });
       }
       setAuthReady(true);

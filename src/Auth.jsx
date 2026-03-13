@@ -19,7 +19,6 @@ export default function Auth({ onLogin }) {
       await supabase.from("profiles").insert({
         id: data.user.id, full_name: name,
         username: name.toLowerCase().replace(/\s+/g, ""),
-        bio: "Ready for anything 🌍", location: "Sofia, BG",
       });
       onLogin(data.user, name, true);
     }
