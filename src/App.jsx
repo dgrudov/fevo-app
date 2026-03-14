@@ -1521,6 +1521,15 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   const [showUpRate, setShowUpRate] = useState(null);
   const [showLevelInfo, setShowLevelInfo] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('gruvio_notif_prefs') || '{}'); } catch { return {}; }
+  });
+  const updateNotifPref = (key, val) => {
+    const updated = { ...notifPrefs, [key]: val };
+    setNotifPrefs(updated);
+    localStorage.setItem('gruvio_notif_prefs', JSON.stringify(updated));
+  };
   const myEvents = allUserEvents.filter(e => e.hostId === user?.id);
   const joinedEvents = allUserEvents.filter(e => e.members.includes(user?.id) && e.hostId !== user?.id);
 
@@ -1624,6 +1633,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   const displayUsername = isMe ? (myName ? myName.toLowerCase().replace(/\s+/g, "") : "you") : (profile?.username || "");
 
   return (
+    <>
     <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: "calc(100px + env(safe-area-inset-bottom))", background: "var(--bg)", minHeight: "100vh" }}>
       <div style={{ height: 140, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1a0800, #2d1200)" }} />
@@ -1658,7 +1668,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
         {isMe && !editing && (
           <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
             <div onClick={() => setEditing(true)} style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Edit</div>
-            <div onClick={async () => { await supabase.auth.signOut(); }} style={{ background: "rgba(239,68,68,0.2)", backdropFilter: "blur(10px)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: "#ef4444", cursor: "pointer" }}>Log out</div>
+            <div onClick={() => setShowSettings(true)} style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 12px", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center" }}>⚙️</div>
           </div>
         )}
       </div>
@@ -2037,5 +2047,81 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
         )}
       </div>
     </div>
+
+    {/* Settings Sheet */}
+    {showSettings && isMe && (
+      <div onClick={() => setShowSettings(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#161009", borderRadius: "24px 24px 0 0", border: "1px solid rgba(255,255,255,0.08)", borderBottom: "none", padding: "20px 20px calc(32px + env(safe-area-inset-bottom))", maxHeight: "85vh", overflowY: "auto" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px" }} />
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 24 }}>Settings</div>
+
+          {/* Notifications */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Notifications</div>
+          {[
+            { key: "new_events", label: "New events matching interests", icon: "🎉" },
+            { key: "buddy_requests", label: "Buddy requests", icon: "👋" },
+            { key: "join_requests", label: "Join requests to my events", icon: "📋" },
+            { key: "weekend_digest", label: "Weekend event digest", icon: "📅" },
+          ].map(({ key, label, icon }) => (
+            <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 18 }}>{icon}</span>
+                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>{label}</span>
+              </div>
+              <div onClick={() => updateNotifPref(key, notifPrefs[key] === false ? true : false)}
+                style={{ width: 44, height: 26, borderRadius: 13, background: notifPrefs[key] === false ? "rgba(255,255,255,0.1)" : "var(--accent)", transition: "background 0.2s", cursor: "pointer", position: "relative", flexShrink: 0 }}>
+                <div style={{ position: "absolute", top: 3, left: notifPrefs[key] === false ? 3 : 21, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
+              </div>
+            </div>
+          ))}
+
+          {/* Legal */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1, textTransform: "uppercase", margin: "24px 0 12px" }}>Legal</div>
+          {[
+            { label: "Privacy Policy", url: "https://gruvio.app/privacy" },
+            { label: "Terms of Service", url: "https://gruvio.app/terms" },
+          ].map(({ label, url }) => (
+            <div key={label} onClick={() => window.open(url, "_blank")} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}>
+              <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>{label}</span>
+              <span style={{ fontSize: 14, color: "var(--text3)" }}>›</span>
+            </div>
+          ))}
+
+          {/* About */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1, textTransform: "uppercase", margin: "24px 0 12px" }}>About</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>Version</span>
+            <span style={{ fontSize: 14, color: "var(--text3)" }}>1.0.0</span>
+          </div>
+
+          {/* Account */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1, textTransform: "uppercase", margin: "24px 0 12px" }}>Account</div>
+          <div onClick={async () => { setShowSettings(false); await supabase.auth.signOut(); }}
+            style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}>
+            <span style={{ fontSize: 18 }}>🚪</span>
+            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>Log Out</span>
+          </div>
+          <div onClick={async () => {
+            if (!window.confirm("Delete your account? This will permanently remove your profile, events, and all data. This cannot be undone.")) return;
+            try {
+              const apiBase = window.Capacitor ? "https://gruvio.app" : "";
+              const { data: { session } } = await supabase.auth.getSession();
+              await fetch(`${apiBase}/api/delete-account`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: session?.access_token }),
+              });
+              await supabase.auth.signOut();
+            } catch (e) {
+              alert("Something went wrong. Please contact support@gruvio.app");
+            }
+          }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", cursor: "pointer" }}>
+            <span style={{ fontSize: 18 }}>🗑️</span>
+            <span style={{ fontSize: 14, color: "#ef4444" }}>Delete Account</span>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
