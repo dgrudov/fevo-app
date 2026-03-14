@@ -8,6 +8,17 @@ export default function Auth({ onLogin }) {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleForgotPassword = async () => {
+    if (!email) { setError("Enter your email address first"); return; }
+    setLoading(true); setError(null);
+    const redirectTo = window.Capacitor ? "https://gruvio.app" : window.location.origin;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    setLoading(false);
+    if (resetError) { setError(resetError.message); return; }
+    setResetSent(true);
+  };
 
   const handleSignup = async () => {
     if (!email || !password || !name) { setError("Please fill in all fields"); return; }
@@ -95,6 +106,20 @@ export default function Auth({ onLogin }) {
           )}
           <input className="auth-input" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" type="email" />
           <input className="auth-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" />
+
+          {mode === "login" && (
+            <div style={{ textAlign: "right", marginTop: -4 }}>
+              <span onClick={handleForgotPassword} style={{ fontSize: 13, color: "rgba(255,87,51,0.7)", cursor: "pointer", fontWeight: 500 }}>
+                Forgot password?
+              </span>
+            </div>
+          )}
+
+          {resetSent && (
+            <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#4ade80" }}>
+              Check your email — we sent a password reset link.
+            </div>
+          )}
 
           {error && (
             <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#ef4444" }}>

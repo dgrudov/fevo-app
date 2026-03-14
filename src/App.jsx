@@ -81,6 +81,10 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState(null);
+  const [newPasswordLoading, setNewPasswordLoading] = useState(false);
   const [joinRequests, setJoinRequests] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
   const [now, setNow] = useState(new Date());
@@ -223,6 +227,7 @@ export default function App() {
       setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
       if (_event === "SIGNED_IN") return; // handled by onLogin callback after profile check
       if (_event === "SIGNED_OUT") {
         setUser(null);
@@ -492,6 +497,32 @@ export default function App() {
   if (profileLoading) return (
     <div style={{ minHeight: "100vh", background: "#0a0805", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ fontSize: 40, filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>🌍</div>
+    </div>
+  );
+
+  if (passwordRecovery) return (
+    <div style={{ minHeight: "100vh", background: "#0a0805", fontFamily: "'DM Sans', sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+      <div style={{ fontSize: 48, marginBottom: 16, filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>🔐</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Set New Password</div>
+      <div style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", marginBottom: 32, textAlign: "center" }}>Choose a new password for your account</div>
+      <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 12 }}>
+        <input value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password" type="password"
+          style={{ background: "#1a1510", border: "1.5px solid rgba(255,120,60,0.12)", color: "#fff", borderRadius: 12, padding: "14px 16px", fontSize: 15, width: "100%", outline: "none", boxSizing: "border-box" }} />
+        {newPasswordError && (
+          <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#ef4444" }}>{newPasswordError}</div>
+        )}
+        <button disabled={newPasswordLoading} onClick={async () => {
+          if (newPassword.length < 6) { setNewPasswordError("Password must be at least 6 characters"); return; }
+          setNewPasswordLoading(true); setNewPasswordError(null);
+          const { error } = await supabase.auth.updateUser({ password: newPassword });
+          setNewPasswordLoading(false);
+          if (error) { setNewPasswordError(error.message); return; }
+          setPasswordRecovery(false);
+          setNewPassword("");
+        }} style={{ padding: 15, borderRadius: 14, border: "none", cursor: newPasswordLoading ? "not-allowed" : "pointer", background: newPasswordLoading ? "#221c14" : "linear-gradient(135deg, #ff5733, #ff8c42)", color: newPasswordLoading ? "rgba(255,255,255,0.35)" : "#fff", fontSize: 16, fontWeight: 700, boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>
+          {newPasswordLoading ? "Saving..." : "Save New Password"}
+        </button>
+      </div>
     </div>
   );
 
