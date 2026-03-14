@@ -13,10 +13,13 @@ export const sendNotification = async (userId, type, title, body, data = {}) => 
 
   // Push notification (skip in local dev)
   if (IS_PROD) {
-    fetch(`${API_BASE}/api/send-push`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, title, body }),
-    }).catch(() => {});
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      fetch(`${API_BASE}/api/send-push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, title, body, token: session.access_token }),
+      }).catch(() => {});
+    }
   }
 };

@@ -9,6 +9,7 @@ export default function Auth({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [resetSent, setResetSent] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   const handleForgotPassword = async () => {
     if (!email) { setError("Enter your email address first"); return; }
@@ -22,6 +23,7 @@ export default function Auth({ onLogin }) {
 
   const handleSignup = async () => {
     if (!email || !password || !name) { setError("Please fill in all fields"); return; }
+    if (!ageConfirmed) { setError("You must be at least 16 years old to use Gruvio"); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true); setError(null);
     const { data, error: signupError } = await supabase.auth.signUp({ email, password });
@@ -127,6 +129,15 @@ export default function Auth({ onLogin }) {
             </div>
           )}
 
+          {mode === "signup" && (
+            <div onClick={() => setAgeConfirmed(v => !v)} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "4px 0" }}>
+              <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${ageConfirmed ? "#ff5733" : "rgba(255,255,255,0.2)"}`, background: ageConfirmed ? "#ff5733" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
+                {ageConfirmed && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
+              </div>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.4 }}>I confirm I am at least 16 years old</span>
+            </div>
+          )}
+
           <button onClick={mode === "login" ? handleLogin : handleSignup} disabled={loading} style={{
             padding: 15, borderRadius: 14, border: "none", cursor: loading ? "not-allowed" : "pointer",
             background: loading ? "#221c14" : "linear-gradient(135deg, #ff5733, #ff8c42)",
@@ -140,8 +151,11 @@ export default function Auth({ onLogin }) {
         </div>
       </div>
 
-      <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 12, marginTop: 24, textAlign: "center" }}>
-        By continuing you agree to our Terms of Service and Privacy Policy
+      <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginTop: 24, textAlign: "center", lineHeight: 1.6 }}>
+        By continuing you agree to our{" "}
+        <a href="https://gruvio.app/terms" target="_blank" rel="noreferrer" style={{ color: "rgba(255,87,51,0.7)", textDecoration: "underline" }}>Terms of Service</a>
+        {" "}and{" "}
+        <a href="https://gruvio.app/privacy" target="_blank" rel="noreferrer" style={{ color: "rgba(255,87,51,0.7)", textDecoration: "underline" }}>Privacy Policy</a>
       </p>
     </div>
   );

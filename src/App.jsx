@@ -473,7 +473,7 @@ export default function App() {
       fetch(`${apiBase}/api/notify-new-event`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: data.id, category: newEvent.category, hostId: user.id, title: createForm.title, emoji: typeData.emoji }),
+        body: JSON.stringify({ eventId: data.id, category: newEvent.category, hostId: user.id, title: createForm.title, emoji: typeData.emoji, token: (await supabase.auth.getSession()).data.session?.access_token }),
       }).catch(() => {});
     }
     // Notify buddies about new event

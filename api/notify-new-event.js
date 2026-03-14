@@ -62,13 +62,15 @@ function postToEndpoint(endpoint, headers, body) {
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'https://gruvio.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
-  const { eventId, category, hostId, title, emoji } = req.body;
-  if (!eventId || !category || !hostId) return res.status(400).json({ error: 'Missing fields' });
+  const { eventId, category, hostId, title, emoji, token } = req.body;
+  if (!eventId || !category || !hostId || !token) return res.status(400).json({ error: 'Missing fields' });
+  const { data: { user: caller }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !caller || caller.id !== hostId) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const { VAPID_PUBLIC_KEY: pubKey, VAPID_PRIVATE_KEY: privKey } = process.env;

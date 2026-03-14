@@ -58,11 +58,15 @@ export default function Chat({ event, user, myName, onBack }) {
     for (const memberId of otherMembers) {
       // Push BEFORE RPC — so server check sees the previous unread notification, not this one
       if (location.hostname !== "localhost") {
-        fetch("/api/send-push", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: memberId, title: `${event.emoji} ${event.title}`, body: `${myName}: ${content}`, eventId: event.id }),
-        }).catch(() => {});
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session?.access_token) return;
+          const apiBase = window.Capacitor ? "https://gruvio.app" : "";
+          fetch(`${apiBase}/api/send-push`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: memberId, title: `${event.emoji} ${event.title}`, body: `${myName}: ${content}`, eventId: event.id, token: session.access_token }),
+          }).catch(() => {});
+        });
       }
       await supabase.rpc("notify_chat_member", {
         p_member_id: memberId,
