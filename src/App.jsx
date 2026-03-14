@@ -455,13 +455,14 @@ export default function App() {
     setCreateStep(1); setScreen("explore");
     setToast("Event created! 🎉");
     setTimeout(() => setToast(null), 3000);
-    // Notify users with matching interests (only on prod to avoid spamming real users during dev)
-    if (location.hostname !== "localhost") {
-      fetch("/api/notify-new-event", {
+    // Notify users with matching interests (skip in local dev)
+    if (import.meta.env.PROD || window.Capacitor) {
+      const apiBase = window.Capacitor ? "https://fevo-app.vercel.app" : "";
+      fetch(`${apiBase}/api/notify-new-event`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId: data.id, category: newEvent.category, hostId: user.id, title: createForm.title, emoji: typeData.emoji }),
-      }).then(r => r.json()).then(d => console.log("[notify-new-event]", d)).catch(e => console.error("[notify-new-event]", e));
+      }).catch(() => {});
     }
     // Notify buddies about new event
     supabase.from("buddy_requests").select("requester_id, addressee_id")
