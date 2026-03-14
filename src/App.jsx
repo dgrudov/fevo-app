@@ -87,6 +87,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [joinRequests, setJoinRequests] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
   const [now, setNow] = useState(new Date());
@@ -230,6 +231,19 @@ export default function App() {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "SIGNED_IN") return; // handled by onLogin callback after profile check
+      if (_event === "SIGNED_OUT") {
+        setUser(null);
+        setMyInterests([]);
+        setMyName("");
+        setProfileIncomplete(false);
+        setProfileNudgeDismissed(false);
+        sessionStorage.removeItem("nudge_dismissed");
+        setMyBuddyIds([]);
+        setJoined(null);
+        setScreen("explore");
+        setSelectedEvent(null);
+        return;
+      }
       setUser(session?.user || null);
     });
     return () => subscription.unsubscribe();
@@ -482,7 +496,33 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Auth onLogin={(u, name, isNewUser, banned) => { setIsBanned(false); setUser(u); if (banned) { setIsBanned(true); return; } setMyName(name); if (isNewUser) setShowOnboarding(true); subscribeToPush(u.id); }} />;
+  if (profileLoading) return (
+    <div style={{ minHeight: "100vh", background: "#0a0805", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ fontSize: 40, filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>🌍</div>
+    </div>
+  );
+
+  if (!user) return <Auth onLogin={async (u, name, isNewUser, banned) => {
+    setProfileLoading(true);
+    setIsBanned(false);
+    setMyInterests([]);
+    setProfileIncomplete(false);
+    setProfileNudgeDismissed(false);
+    sessionStorage.removeItem("nudge_dismissed");
+    setMyBuddyIds([]);
+    setJoined(null);
+    if (banned) { setIsBanned(true); setProfileLoading(false); return; }
+    setMyName(name);
+    if (isNewUser) setShowOnboarding(true);
+    subscribeToPush(u.id);
+    const { data } = await supabase.from("profiles").select("interests, bio, avatar_url").eq("id", u.id).maybeSingle();
+    if (data) {
+      setMyInterests(data.interests || []);
+      if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
+    }
+    setUser(u);
+    setProfileLoading(false);
+  }} />;
 
   if (isBanned) return (
     <div className="phone-frame" style={{ minHeight: "100vh", background: "#0a0805", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 32px", textAlign: "center" }}>
