@@ -1522,6 +1522,8 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   const [showLevelInfo, setShowLevelInfo] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState(() => {
     try { return JSON.parse(localStorage.getItem('gruvio_notif_prefs') || '{}'); } catch { return {}; }
   });
@@ -1667,8 +1669,8 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
         )}
         {isMe && !editing && (
           <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
-            <div onClick={() => setEditing(true)} style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Edit</div>
-            <div onClick={() => setShowSettings(true)} style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 12px", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center" }}>⚙️</div>
+            <div onClick={() => setEditing(true)} style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.12s, opacity 0.12s" }} onMouseDown={e => e.currentTarget.style.transform="scale(0.92)"} onMouseUp={e => e.currentTarget.style.transform="scale(1)"} onTouchStart={e => e.currentTarget.style.transform="scale(0.92)"} onTouchEnd={e => e.currentTarget.style.transform="scale(1)"}>Edit</div>
+            <div onClick={() => setShowSettings(true)} style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 12px", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.12s, opacity 0.12s" }} onMouseDown={e => e.currentTarget.style.transform="scale(0.92)"} onMouseUp={e => e.currentTarget.style.transform="scale(1)"} onTouchStart={e => e.currentTarget.style.transform="scale(0.92)"} onTouchEnd={e => e.currentTarget.style.transform="scale(1)"}>⚙️</div>
           </div>
         )}
       </div>
@@ -1834,7 +1836,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
             </div>
           ))}
         </div>
-        <div onClick={buddyCount > 0 ? () => setShowBuddyModal(true) : undefined} style={{ marginTop: 10, background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: buddyCount > 0 ? "pointer" : "default" }}>
+        <div onClick={buddyCount > 0 ? () => setShowBuddyModal(true) : undefined} onMouseDown={buddyCount > 0 ? e => e.currentTarget.style.transform="scale(0.97)" : undefined} onMouseUp={buddyCount > 0 ? e => e.currentTarget.style.transform="scale(1)" : undefined} onTouchStart={buddyCount > 0 ? e => e.currentTarget.style.transform="scale(0.97)" : undefined} onTouchEnd={buddyCount > 0 ? e => e.currentTarget.style.transform="scale(1)" : undefined} style={{ marginTop: 10, background: "var(--bg3)", borderRadius: 16, border: "1px solid var(--border2)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: buddyCount > 0 ? "pointer" : "default", transition: "transform 0.12s" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 20 }}>👥</span>
             <div>
@@ -2101,24 +2103,43 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
             <span style={{ fontSize: 18 }}>🚪</span>
             <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>Log Out</span>
           </div>
-          <div onClick={async () => {
-            if (!window.confirm("Delete your account? This will permanently remove your profile, events, and all data. This cannot be undone.")) return;
+          <div onClick={() => { setShowSettings(false); setTimeout(() => setShowDeleteConfirm(true), 200); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", cursor: "pointer" }}>
+            <span style={{ fontSize: 18 }}>🗑️</span>
+            <span style={{ fontSize: 14, color: "#ef4444" }}>Delete Account</span>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Delete Account Confirmation */}
+    {showDeleteConfirm && isMe && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+        <div style={{ width: "100%", maxWidth: 400, background: "#1a0d05", borderRadius: 24, border: "1px solid rgba(239,68,68,0.25)", padding: "32px 24px", textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 20px" }}>⚠️</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 10 }}>Delete Account</div>
+          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.6, marginBottom: 28 }}>This will permanently delete your profile, events, messages, and all data. <span style={{ color: "rgba(239,68,68,0.8)", fontWeight: 600 }}>This cannot be undone.</span></div>
+          <button disabled={deleting} onClick={async () => {
+            setDeleting(true);
             try {
-              const apiBase = window.Capacitor ? "https://gruvio.app" : "";
               const { data: { session } } = await supabase.auth.getSession();
-              await fetch(`${apiBase}/api/delete-account`, {
+              const r = await fetch("https://gruvio.app/api/delete-account", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token: session?.access_token }),
               });
+              if (!r.ok) throw new Error("Server error");
               await supabase.auth.signOut();
             } catch (e) {
+              setDeleting(false);
+              setShowDeleteConfirm(false);
               alert("Something went wrong. Please contact support@gruvio.app");
             }
-          }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", cursor: "pointer" }}>
-            <span style={{ fontSize: 18 }}>🗑️</span>
-            <span style={{ fontSize: 14, color: "#ef4444" }}>Delete Account</span>
-          </div>
+          }} style={{ width: "100%", padding: "14px", borderRadius: 14, background: deleting ? "rgba(239,68,68,0.3)" : "rgba(239,68,68,0.85)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: deleting ? "default" : "pointer", marginBottom: 12, transition: "background 0.2s" }}>
+            {deleting ? "Deleting..." : "Yes, delete my account"}
+          </button>
+          <button onClick={() => setShowDeleteConfirm(false)} style={{ width: "100%", padding: "14px", borderRadius: 14, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+            Cancel
+          </button>
         </div>
       </div>
     )}
