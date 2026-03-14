@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|privacy|terms|icon|manifest|sw\\.js).*)", "destination": "/index.html" }
   ],
   "crons": [
     { "path": "/api/notify-weekend", "schedule": "0 8 * * 5" }

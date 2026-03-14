@@ -2147,7 +2147,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
             { label: "Privacy Policy", url: "https://gruvio.app/privacy" },
             { label: "Terms of Service", url: "https://gruvio.app/terms" },
           ].map(({ label, url }) => (
-            <div key={label} onClick={() => window.open(url, "_blank")} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}>
+            <div key={label} onClick={() => window.open(url, window.Capacitor ? "_system" : "_blank")} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}>
               <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>{label}</span>
               <span style={{ fontSize: 14, color: "var(--text3)" }}>›</span>
             </div>

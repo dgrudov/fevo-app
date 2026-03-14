@@ -153,9 +153,9 @@ export default function Auth({ onLogin }) {
 
       <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginTop: 24, textAlign: "center", lineHeight: 1.6 }}>
         By continuing you agree to our{" "}
-        <a href="https://gruvio.app/terms" target="_blank" rel="noreferrer" style={{ color: "rgba(255,87,51,0.7)", textDecoration: "underline" }}>Terms of Service</a>
+        <span onClick={() => window.open("https://gruvio.app/terms", window.Capacitor ? "_system" : "_blank")} style={{ color: "rgba(255,87,51,0.7)", textDecoration: "underline", cursor: "pointer" }}>Terms of Service</span>
         {" "}and{" "}
-        <a href="https://gruvio.app/privacy" target="_blank" rel="noreferrer" style={{ color: "rgba(255,87,51,0.7)", textDecoration: "underline" }}>Privacy Policy</a>
+        <span onClick={() => window.open("https://gruvio.app/privacy", window.Capacitor ? "_system" : "_blank")} style={{ color: "rgba(255,87,51,0.7)", textDecoration: "underline", cursor: "pointer" }}>Privacy Policy</span>
       </p>
     </div>
   );
