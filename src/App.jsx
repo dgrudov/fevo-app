@@ -34,7 +34,6 @@ const BG_CITIES = [
 const ACTIVITY_TYPES = [
   { label: "Disco / Club", emoji: "🪩", category: "Nightlife", color: "#FF3CAC" },
   { label: "Bar Night", emoji: "🍻", category: "Nightlife", color: "#F7971E" },
-  { label: "Rooftop Bar", emoji: "🍹", category: "Nightlife", color: "#e96c2f" },
   { label: "Karaoke", emoji: "🎤", category: "Nightlife", color: "#a78bfa" },
   { label: "Live Music", emoji: "🎸", category: "Nightlife", color: "#f43f5e" },
   { label: "House Party", emoji: "🏠", category: "Nightlife", color: "#ec4899" },
@@ -60,9 +59,7 @@ const ACTIVITY_TYPES = [
   { label: "Cycling", emoji: "🚴", category: "Outdoors", color: "#06b6d4" },
   { label: "Beach Day", emoji: "🏖️", category: "Outdoors", color: "#fbbf24" },
   { label: "Camping", emoji: "⛺", category: "Outdoors", color: "#65a30d" },
-  { label: "Road Trip", emoji: "🚗", category: "Travel", color: "#34d399" },
-  { label: "Day Trip", emoji: "🗺️", category: "Travel", color: "#60a5fa" },
-  { label: "Weekend Away", emoji: "🧳", category: "Travel", color: "#a78bfa" },
+  { label: "Trip / Getaway", emoji: "🚗", category: "Travel", color: "#34d399" },
 ];
 
 export default function App() {
