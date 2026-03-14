@@ -1,7 +1,7 @@
 self.addEventListener('push', (event) => {
   const data = event.data?.json() || {};
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Fevo', {
+    self.registration.showNotification(data.title || 'Gruvio', {
       body: data.body || '',
 vibrate: [200, 100, 200],
       data: { url: '/' },

@@ -457,7 +457,7 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
     // Notify users with matching interests (skip in local dev)
     if (import.meta.env.PROD || window.Capacitor) {
-      const apiBase = window.Capacitor ? "https://fevo-app.vercel.app" : "";
+      const apiBase = window.Capacitor ? "https://gruvio.app" : "";
       fetch(`${apiBase}/api/notify-new-event`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -489,7 +489,7 @@ export default function App() {
       <div style={{ fontSize: 52, marginBottom: 20 }}>🚫</div>
       <h1 style={{ fontFamily: "'Clash Display', serif", fontSize: 26, fontWeight: 800, color: "#fff", marginBottom: 12 }}>Account Suspended</h1>
       <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 32 }}>Your account has been suspended due to violations of our community guidelines.</p>
-      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>If you believe this is a mistake, contact us at<br /><span style={{ color: "rgba(255,87,51,0.7)" }}>support@fevo.app</span></p>
+      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", lineHeight: 1.6 }}>If you believe this is a mistake, contact us at<br /><span style={{ color: "rgba(255,87,51,0.7)" }}>support@gruvio.app</span></p>
       <button onClick={() => supabase.auth.signOut()} style={{ marginTop: 32, padding: "12px 28px", borderRadius: 100, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Sign out</button>
     </div>
   );
@@ -503,7 +503,7 @@ export default function App() {
   );
 
   return (
-    <div className="phone-frame" style={{ minHeight: "100vh", background: "var(--bg)", fontFamily: "'DM Sans', sans-serif", color: "var(--text)", overflowX: "hidden" }}>
+    <div className="phone-frame" style={{ minHeight: "100vh", background: "var(--bg)", fontFamily: "'DM Sans', sans-serif", color: "var(--text)", overflowX: "hidden", paddingTop: "env(safe-area-inset-top)" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -535,7 +535,7 @@ export default function App() {
         .tab-btn { cursor: pointer; padding: 7px 14px; border-radius: 100px; font-size: 13px; font-weight: 600; transition: all 0.18s; border: none; }
         .progress { height: 3px; border-radius: 100px; background: var(--bg4); overflow: hidden; }
         .progress-fill { height: 100%; border-radius: 100px; transition: width 0.6s ease; }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(10,8,5,0.92); backdrop-filter: blur(20px); border-top: 1px solid var(--border2); padding: 12px 24px 20px; display: flex; justify-content: space-around; z-index: 200; }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(10,8,5,0.92); backdrop-filter: blur(20px); border-top: 1px solid var(--border2); padding: 12px 24px calc(20px + env(safe-area-inset-bottom)); display: flex; justify-content: space-around; z-index: 200; }
         .stagger-1 { animation: fadeIn 0.35s ease 0.05s both; }
         .stagger-2 { animation: fadeIn 0.35s ease 0.1s both; }
         .stagger-3 { animation: fadeIn 0.35s ease 0.15s both; }
@@ -561,7 +561,7 @@ export default function App() {
 
       {/* ── EXPLORE ── */}
       {screen === "explore" && (
-        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: "calc(100px + env(safe-area-inset-bottom))" }}>
           <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 300, height: 200, background: "radial-gradient(ellipse, rgba(255,87,51,0.08), transparent 70%)", pointerEvents: "none" }} />
           <div style={{ padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
             <div>
@@ -705,7 +705,7 @@ export default function App() {
 
       {/* ── EVENT DETAIL ── */}
       {screen === "event" && selectedEvent && (
-        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: "calc(100px + env(safe-area-inset-bottom))" }}>
           <div style={{ padding: "20px 16px 0" }}>
             <button className="btn card shadow-sm" onClick={() => navigateTo("explore", { event: null })} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "var(--text2)" }}>← Back</button>
           </div>
@@ -967,7 +967,7 @@ export default function App() {
 
       {/* ── CREATE ── */}
       {screen === "create" && (
-        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: "calc(100px + env(safe-area-inset-bottom))" }}>
           <div style={{ padding: "24px 16px 0" }}>
             <div style={{ fontSize: 11, letterSpacing: 2.5, color: "var(--accent)", fontWeight: 700, marginBottom: 6 }}>CREATE EVENT</div>
             <h1 className="display" style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, color: "#fff" }}>What's the plan?</h1>
@@ -1102,7 +1102,7 @@ export default function App() {
 
       {/* ── JOIN REQUESTS ── */}
       {screen === "requests" && (
-        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100 }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: "calc(100px + env(safe-area-inset-bottom))" }}>
           <div style={{ padding: "20px 16px 0" }}>
             <button className="btn card shadow-sm" onClick={() => navigateTo("explore")} style={{ padding: "9px 16px", fontSize: 14, fontWeight: 600, color: "var(--text2)" }}>← Back</button>
           </div>
@@ -1236,7 +1236,7 @@ export default function App() {
                     const blob = await resp.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
-                    a.href = url; a.download = `fevo-photo-${photoLightbox + 1}.jpg`; a.click();
+                    a.href = url; a.download = `gruvio-photo-${photoLightbox + 1}.jpg`; a.click();
                     URL.revokeObjectURL(url);
                   }} style={{ background: "rgba(255,87,51,0.15)", border: "1px solid rgba(255,87,51,0.3)", color: "var(--accent)", borderRadius: 100, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⬇ Save</button>
                   {photo.user_id === user?.id && (
@@ -1457,7 +1457,7 @@ export default function App() {
                   <button onClick={async () => {
                     const { data } = await supabase.from("buddy_requests").insert({ requester_id: user.id, addressee_id: m.id, status: "pending" }).select().single();
                     if (data) {
-                      await sendNotification(m.id, "buddy_request", `${myName} wants to be your buddy 👋`, `You met at a Fevo event`, { requester_id: user.id });
+                      await sendNotification(m.id, "buddy_request", `${myName} wants to be your buddy 👋`, `You met at a Gruvio event`, { requester_id: user.id });
                       setMyBuddyIds(prev => [...prev, m.id]);
                       setBuddySuggestions(prev => {
                         const next = prev.filter(s => s.id !== m.id);
@@ -1624,7 +1624,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   const displayUsername = isMe ? (myName ? myName.toLowerCase().replace(/\s+/g, "") : "you") : (profile?.username || "");
 
   return (
-    <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: 100, background: "var(--bg)", minHeight: "100vh" }}>
+    <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: "calc(100px + env(safe-area-inset-bottom))", background: "var(--bg)", minHeight: "100vh" }}>
       <div style={{ height: 140, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1a0800, #2d1200)" }} />
         <div style={{ position: "absolute", inset: 0, opacity: 0.12, fontSize: 34, display: "flex", flexWrap: "wrap", gap: 14, padding: 16, filter: "blur(1px)", lineHeight: 1 }}>

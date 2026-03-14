@@ -15,7 +15,7 @@ const slides = [
   {
     id: "welcome",
     emoji: "🌍",
-    eyebrow: "WELCOME TO FEVO",
+    eyebrow: "WELCOME TO GRUVIO",
     title: "Tonight\nstarts here.",
     subtitle: "Your group too small? Find others doing the same thing and merge into something bigger.",
     bg: ["#0a0a0a", "#1a0800", "#2d0f00"],

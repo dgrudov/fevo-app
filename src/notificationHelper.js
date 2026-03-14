@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
 // In native Capacitor app, window.Capacitor exists and we need the full URL
-const API_BASE = window.Capacitor ? "https://fevo-app.vercel.app" : "";
+const API_BASE = window.Capacitor ? "https://gruvio.app" : "";
 const IS_PROD = import.meta.env.PROD || !!window.Capacitor;
 
 export const sendNotification = async (userId, type, title, body, data = {}) => {

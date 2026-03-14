@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.fevo',
-  appName: 'Fevo',
+  appId: "app.gruvio",
+  appName: "Gruvio",
   webDir: 'dist',
   server: {
     androidScheme: 'https',

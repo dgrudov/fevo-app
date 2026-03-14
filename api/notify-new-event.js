@@ -18,7 +18,7 @@ function makeVapidJWT(endpoint, vapidPrivateKeyBase64) {
   const { protocol, host } = new URL(endpoint);
   const now = Math.floor(Date.now() / 1000);
   const hdr = b64encode(Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
-  const pld = b64encode(Buffer.from(JSON.stringify({ aud: `${protocol}//${host}`, exp: now + 43200, sub: 'mailto:admin@fevo.app' })));
+  const pld = b64encode(Buffer.from(JSON.stringify({ aud: `${protocol}//${host}`, exp: now + 43200, sub: 'mailto:admin@gruvio.app' })));
   const input = `${hdr}.${pld}`;
   const rawKey = b64decode(vapidPrivateKeyBase64);
   const prefix = Buffer.from('3041020100301306072a8648ce3d020106082a8648ce3d030107042730250201010420', 'hex');
