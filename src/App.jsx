@@ -410,12 +410,12 @@ export default function App() {
       await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", event.id);
       setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
       setSelectedEvent({ ...event, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames });
-      setToast("Welcome back to your event! 👑");
+      setToast("Welcome back to your event!");
       setTimeout(() => setToast(null), 3000);
       return;
     }
-    if (event.members.includes(user.id)) { setToast("You're already in this squad 👀"); setTimeout(() => setToast(null), 3000); return; }
-    if (event.groupSize >= event.maxSize) { setToast("This event is full 😔"); setTimeout(() => setToast(null), 3000); return; }
+    if (event.members.includes(user.id)) { setToast("You're already in this squad"); setTimeout(() => setToast(null), 3000); return; }
+    if (event.groupSize >= event.maxSize) { setToast("This event is full"); setTimeout(() => setToast(null), 3000); return; }
     const { data: existing } = await supabase.from("join_requests").select("*").eq("event_id", event.id).eq("user_id", user.id).single();
     if (existing) {
       await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_id", user.id);
@@ -425,7 +425,7 @@ export default function App() {
     if (error) { console.error(error); return; }
     await sendNotification(event.hostId, "join_request", "New join request 👥", `${myName} wants to join ${event.emoji} ${event.title}`, { event_id: event.id, user_id: user.id, user_name: myName });
     setMyRequests([...myRequests, event.id]);
-    setToast("Request sent! Waiting for approval 🙌");
+    setToast("Request sent!");
     setTimeout(() => setToast(null), 3000);
   };
 
@@ -435,7 +435,7 @@ export default function App() {
     const updatedNames = (event.memberNames || []).filter(m => m !== myName);
     const updatedSize = Math.max(0, (event.groupSize || 1) - 1);
     const { error } = await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", event.id);
-    if (error) { console.error("leave error:", error); setToast("Could not leave event 😔"); setTimeout(() => setToast(null), 3000); return; }
+    if (error) { console.error("leave error:", error); setToast("Could not leave event"); setTimeout(() => setToast(null), 3000); return; }
     await supabase.from("join_requests").delete().eq("event_id", event.id).eq("user_id", user.id);
     setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
     setMyRequests(prev => prev.filter(id => id !== event.id));
@@ -465,7 +465,7 @@ export default function App() {
     setEvents([formatted, ...events]);
     setCreateForm({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });
     setCreateStep(1); setScreen("explore");
-    setToast("Event created! 🎉");
+    setToast("Event created!");
     setTimeout(() => setToast(null), 3000);
     // Notify users with matching interests (skip in local dev)
     if (import.meta.env.PROD || window.Capacitor) {
@@ -490,19 +490,19 @@ export default function App() {
 
   if (!authReady) return (
     <div style={{ minHeight: "100vh", background: "#0a0805", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ fontSize: 40, filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>🌍</div>
+      <div style={{ fontFamily: "'Clash Display', Georgia, serif", fontSize: 36, fontWeight: 700, color: "#ff5733", filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>Gruvio</div>
     </div>
   );
 
   if (profileLoading) return (
     <div style={{ minHeight: "100vh", background: "#0a0805", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ fontSize: 40, filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>🌍</div>
+      <div style={{ fontFamily: "'Clash Display', Georgia, serif", fontSize: 36, fontWeight: 700, color: "#ff5733", filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>Gruvio</div>
     </div>
   );
 
   if (passwordRecovery) return (
     <div style={{ minHeight: "100vh", background: "#0a0805", fontFamily: "'DM Sans', sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
-      <div style={{ fontSize: 48, marginBottom: 16, filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>🔐</div>
+      <div style={{ fontFamily: "'Clash Display', Georgia, serif", fontSize: 36, fontWeight: 700, color: "#ff5733", marginBottom: 16, filter: "drop-shadow(0 0 20px rgba(255,87,51,0.5))" }}>Gruvio</div>
       <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Set New Password</div>
       <div style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", marginBottom: 32, textAlign: "center" }}>Choose a new password for your account</div>
       <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -650,7 +650,7 @@ export default function App() {
 
           {profileIncomplete && !profileNudgeDismissed && (
             <div style={{ margin: "12px 20px 0", padding: "12px 14px", borderRadius: 14, background: "rgba(255,87,51,0.07)", border: "1px solid rgba(255,87,51,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 22, flexShrink: 0 }}>✏️</span>
+              <span style={{ fontSize: 22, flexShrink: 0, color: "var(--accent)" }}>→</span>
               <div style={{ flex: 1, cursor: "pointer" }} onClick={() => navigateTo("profile")}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Complete your profile</div>
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>Add a bio & photo so people know who's coming</div>
@@ -689,7 +689,7 @@ export default function App() {
               wrapperClassName="date-filter-picker"
               customInput={
                 <button style={{ cursor: "pointer", padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", transition: "all 0.18s", background: filterDate === "pick" ? "rgba(255,87,51,0.15)" : "transparent", color: filterDate === "pick" ? "var(--accent)" : "var(--text3)", border: filterDate === "pick" ? "1px solid rgba(255,87,51,0.3)" : "1px solid transparent" }}>
-                  📅 {filterDate === "pick" && filterPickedDate ? filterPickedDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Pick date"}
+                  {filterDate === "pick" && filterPickedDate ? filterPickedDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "Pick date"}
                 </button>
               }
             />
@@ -699,7 +699,7 @@ export default function App() {
             {filteredEvents.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
                 <div style={{ fontSize: 48, marginBottom: 16, filter: "grayscale(0.3)" }}>
-                  {filterCat === "For You" ? "✨" : filterDate !== "all" ? "📅" : filterCat !== "All" ? "🔍" : "🌍"}
+                  {"·"}
                 </div>
                 <p className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text2)", marginBottom: 8 }}>No events found</p>
                 <p style={{ fontSize: 14, color: "var(--text3)", lineHeight: 1.5 }}>
@@ -780,7 +780,7 @@ export default function App() {
             <h2 className="display" style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 8, color: "#fff", position: "relative" }}>{selectedEvent.title}</h2>
             <span style={{ background: `${selectedEvent.color}20`, color: selectedEvent.color, borderRadius: 100, padding: "5px 14px", fontSize: 12, fontWeight: 700 }}>{selectedEvent.type}</span>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16, position: "relative" }}>
-              {[["🕐", selectedEvent.time && selectedEvent.time !== "TBD" ? new Date(selectedEvent.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : selectedEvent.time], ["📍", selectedEvent.location], ["✨", selectedEvent.vibe], ["👑", `Hosted by ${selectedEvent.host}`]].filter(x => x[1]).map(([icon, val], i) => (
+              {[["🕐", selectedEvent.time && selectedEvent.time !== "TBD" ? new Date(selectedEvent.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : selectedEvent.time], ["📍", selectedEvent.location], [null, selectedEvent.vibe ? `"${selectedEvent.vibe}"` : null], [null, selectedEvent.host ? `Hosted by ${selectedEvent.host}` : null]].filter(x => x[1]).map(([icon, val], i) => (
                 <div key={i} style={{ display: "flex", gap: 10, color: "var(--text2)", fontSize: 14 }}><span>{icon}</span><span>{val}</span></div>
               ))}
             </div>
@@ -798,7 +798,7 @@ export default function App() {
             if (!selectedEvent.members.includes(user?.id) && selectedEvent.hostId !== user?.id) return null;
             return (
               <div style={{ margin: "12px 16px 0", padding: "14px 18px", borderRadius: 16, background: "linear-gradient(135deg, rgba(255,87,51,0.15), rgba(255,140,66,0.08))", border: "1px solid rgba(255,87,51,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ fontSize: 22 }}>⏱</div>
+                <div style={{ fontSize: 22, color: "var(--accent)", fontWeight: 900 }}>·</div>
                 <div>
                   <div style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" }}>Starting in</div>
                   <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: -0.5 }}>{hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`}</div>
@@ -808,7 +808,7 @@ export default function App() {
           })()}
 
           {(selectedEvent.members.includes(user?.id) || selectedEvent.hostId === user?.id) && (
-            <button className="btn" onClick={() => navigateTo("chat", { event: selectedEvent })} style={{ margin: "12px 16px 0", width: "calc(100% - 32px)", padding: 14, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>💬 Squad Chat</button>
+            <button className="btn" onClick={() => navigateTo("chat", { event: selectedEvent })} style={{ margin: "12px 16px 0", width: "calc(100% - 32px)", padding: 14, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Squad Chat</button>
           )}
 
           {(() => {
@@ -827,7 +827,7 @@ export default function App() {
                     try { await navigator.share({ title: selectedEvent.title, text: shareText, url: shareUrl }); } catch {}
                   } else {
                     await navigator.clipboard.writeText(shareUrl);
-                    setToast("Link copied! 🔗"); setTimeout(() => setToast(null), 3000);
+                    setToast("Link copied!"); setTimeout(() => setToast(null), 3000);
                   }
                 }} style={{ ...btnBase, background: "var(--bg3)", color: "var(--text2)", borderColor: "var(--border2)" }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -859,7 +859,7 @@ export default function App() {
                 });
                 setEditingEvent(true);
               }} style={{ flex: 1, padding: "13px 0", borderRadius: 14, fontSize: 14, fontWeight: 700, background: "var(--bg3)", color: "#fff", border: "1px solid var(--border2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-                ✏️ Edit Event
+                Edit Event
               </button>
               <button className="btn" onClick={async () => {
                 if (!window.confirm("Delete this event? This cannot be undone.")) return;
@@ -869,7 +869,7 @@ export default function App() {
                 setScreen("explore"); setSelectedEvent(null);
                 setToast("Event deleted"); setTimeout(() => setToast(null), 3000);
               }} style={{ flex: 1, padding: "13px 0", borderRadius: 14, fontSize: 14, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-                🗑 Delete
+                Delete
               </button>
             </div>
           )}
@@ -926,7 +926,7 @@ export default function App() {
           {(selectedEvent.members.includes(user?.id) || selectedEvent.hostId === user?.id) && (
             <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <span style={{ fontWeight: 700, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>📸 Squad Photos</span>
+                <span style={{ fontWeight: 700, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Squad Photos</span>
                 <label style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--accent)", opacity: uploadingPhoto ? 0.5 : 1, pointerEvents: uploadingPhoto ? "none" : "auto" }}>
                   {uploadingPhoto ? "Uploading…" : "+ Add"}
                   <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={async (e) => {
@@ -952,7 +952,6 @@ export default function App() {
               </div>
               {eventPhotos.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text3)", fontSize: 13 }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>📷</div>
                   No photos yet — be the first to share!
                 </div>
               ) : (
@@ -1010,18 +1009,18 @@ export default function App() {
                     <button className="btn" onClick={() => handleLeave(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>Leave Event</button>
                   </div>
                 ) : selectedEvent.hostId === user?.id && selectedEvent.members.includes(user?.id) ? (
-                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", textAlign: "center" }}>👑 You're the host</div>
+                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", textAlign: "center" }}>You're the host</div>
                 ) : spotsLeft(selectedEvent) <= 0 ? (
                   <div>
-                    <button disabled style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "none", marginBottom: 10 }}>Event is Full 😔</button>
-                    <button className="btn" onClick={() => { setToast("We'll notify you if a spot opens up 🔔"); setTimeout(() => setToast(null), 3000); }} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>🔔 Notify Me When a Spot Opens</button>
+                    <button disabled style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "none", marginBottom: 10 }}>Event is Full</button>
+                    <button className="btn" onClick={() => { setToast("We'll notify you if a spot opens up"); setTimeout(() => setToast(null), 3000); }} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--accent)", border: "1px solid var(--border)" }}>Notify Me When a Spot Opens</button>
                   </div>
                 ) : selectedEvent.hostId === user?.id ? (
-                  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>👑 Rejoin Your Event</button>
+                  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Rejoin Your Event</button>
                 ) : myRequests.includes(selectedEvent.id) ? (
-                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)", textAlign: "center" }}>⏳ Request Pending</div>
+                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)", textAlign: "center" }}>Request Pending</div>
                 ) : (
-                  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Request to Join 🙌</button>
+                  <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Request to Join</button>
                 )}
               </div>
             );
@@ -1116,7 +1115,7 @@ export default function App() {
                 {(!createForm.title || !createForm.time || !createForm.location) && (
                   <p style={{ textAlign: "center", fontSize: 13, color: "var(--text3)" }}>{!createForm.title ? "Add a title to continue" : !createForm.time ? "Pick a date and time to continue" : "Add a venue to continue"}</p>
                 )}
-                <button className="btn" onClick={handleCreate} disabled={!createForm.title || !createForm.time || !createForm.location} style={{ padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700, background: (!createForm.title || !createForm.time || !createForm.location) ? "var(--bg4)" : "linear-gradient(135deg, var(--accent), var(--accent2))", color: (!createForm.title || !createForm.time || !createForm.location) ? "var(--text3)" : "#fff", boxShadow: (!createForm.title || !createForm.time || !createForm.location) ? "none" : "0 8px 24px rgba(255,87,51,0.35)", cursor: (!createForm.title || !createForm.time || !createForm.location) ? "not-allowed" : "pointer" }}>Publish Event ✨</button>
+                <button className="btn" onClick={handleCreate} disabled={!createForm.title || !createForm.time || !createForm.location} style={{ padding: 16, borderRadius: 14, fontSize: 16, fontWeight: 700, background: (!createForm.title || !createForm.time || !createForm.location) ? "var(--bg4)" : "linear-gradient(135deg, var(--accent), var(--accent2))", color: (!createForm.title || !createForm.time || !createForm.location) ? "var(--text3)" : "#fff", boxShadow: (!createForm.title || !createForm.time || !createForm.location) ? "none" : "0 8px 24px rgba(255,87,51,0.35)", cursor: (!createForm.title || !createForm.time || !createForm.location) ? "not-allowed" : "pointer" }}>Publish Event</button>
                 <button className="btn" onClick={() => setCreateStep(2)} style={{ padding: 12, background: "none", fontSize: 14, color: "var(--text3)" }}>← Back</button>
               </div>
             )}
@@ -1177,7 +1176,6 @@ export default function App() {
           <div style={{ padding: "16px 16px 0" }}>
             {joinRequests.filter(r => events.find(e => e.id === r.event_id && e.hostId === user?.id)).length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text3)" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
                 <p style={{ fontWeight: 600, color: "var(--text2)" }}>No pending requests</p>
               </div>
             ) : (
@@ -1213,7 +1211,7 @@ export default function App() {
 
                         if (updateError) {
                           console.error("Update Error:", updateError);
-                          setToast("Error updating event ❌");
+                          setToast("Error updating event");
                           return;
                         }
 
@@ -1225,7 +1223,7 @@ export default function App() {
                         setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
                         setJoinRequests(joinRequests.filter(r => r.id !== request.id));
                         setUnreadCount(prev => Math.max(0, prev - 1));
-                        setToast(`${request.user_name} joined the squad! 🎉`);
+                        setToast(`${request.user_name} joined the squad!`);
 
                         // 5. Пращаме известие на потребителя
                         await sendNotification(request.user_id, "request_accepted", "Request accepted! 🎉", `You're now in the squad for ${event.emoji} ${event.title}`, { event_id: event.id });
@@ -1418,7 +1416,7 @@ export default function App() {
               <button key={reason} onClick={async () => {
                 await supabase.from("reports").insert({ reporter_id: user.id, reported_id: reportSheet, reason });
                 setReportSheet(null);
-                setToast("Report submitted. Thank you 🙏"); setTimeout(() => setToast(null), 3000);
+                setToast("Report submitted. Thank you"); setTimeout(() => setToast(null), 3000);
               }} style={{ width: "100%", padding: "14px 18px", marginBottom: 8, borderRadius: 14, background: "var(--bg3)", border: "1px solid var(--border2)", color: "var(--text2)", fontSize: 15, fontWeight: 600, textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 {reason} <span style={{ color: "var(--text3)" }}>›</span>
               </button>
@@ -1435,7 +1433,7 @@ export default function App() {
             <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 16, paddingLeft: 4 }}>{memberActionSheet.name}</div>
             <button onClick={() => { navigateTo("profileView", { user: { id: memberActionSheet.id, name: memberActionSheet.name } }); setMemberActionSheet(null); }}
               style={{ width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15, fontWeight: 600, background: "var(--bg3)", color: "#fff", border: "1px solid var(--border2)", cursor: "pointer", textAlign: "left", marginBottom: 10 }}>
-              👤 View Profile
+              View Profile
             </button>
             <button onClick={async () => {
               const updatedMembers = selectedEvent.members.filter(id => id !== memberActionSheet.id);
@@ -1448,7 +1446,7 @@ export default function App() {
               await sendNotification(memberActionSheet.id, "removed_from_event", "Removed from event", `You were removed from ${selectedEvent.emoji} ${selectedEvent.title}`, { event_id: selectedEvent.id });
               setMemberActionSheet(null);
             }} style={{ width: "100%", padding: "14px 16px", borderRadius: 14, fontSize: 15, fontWeight: 600, background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", cursor: "pointer", textAlign: "left" }}>
-              🚫 Remove from event
+              Remove from event
             </button>
           </div>
         </div>
@@ -1470,14 +1468,14 @@ export default function App() {
                 setEventConfirmations(prev => [...prev.filter(c => c.user_id !== user.id), { user_id: user.id, response: "coming" }]);
                 setConfirmationPrompt(null);
               }} style={{ width: "100%", padding: 14, borderRadius: 14, fontSize: 16, fontWeight: 700, background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", border: "none", cursor: "pointer", boxShadow: "0 6px 20px rgba(16,185,129,0.3)" }}>
-                I'm in! 🙌
+                I'm in!
               </button>
               <button onClick={async () => {
                 await supabase.from("event_confirmations").upsert({ event_id: confirmationPrompt.id, user_id: user.id, response: "not_coming" }, { onConflict: "event_id,user_id" });
                 setEventConfirmations(prev => [...prev.filter(c => c.user_id !== user.id), { user_id: user.id, response: "not_coming" }]);
                 setConfirmationPrompt(null);
               }} style={{ width: "100%", padding: 14, borderRadius: 14, fontSize: 16, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", cursor: "pointer" }}>
-                Can't make it 😕
+                Can't make it
               </button>
             </div>
           </div>
@@ -1504,7 +1502,6 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px" }}>
           <div style={{ width: "100%", maxWidth: 420, background: "#161009", borderRadius: 24, border: "1px solid rgba(255,255,255,0.06)", padding: "28px 20px 24px" }}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 40, marginBottom: 10 }}>🎉</div>
               <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>Great connections!</div>
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 6 }}>You vibed well with these people — add them as buddies?</div>
             </div>
@@ -1703,9 +1700,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
     <div className="fade-in" style={{ width: "100%", maxWidth: 480, margin: "0 auto", paddingBottom: "calc(100px + env(safe-area-inset-bottom))", background: "var(--bg)", minHeight: "100vh" }}>
       <div style={{ height: 140, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1a0800, #2d1200)" }} />
-        <div style={{ position: "absolute", inset: 0, opacity: 0.12, fontSize: 34, display: "flex", flexWrap: "wrap", gap: 14, padding: 16, filter: "blur(1px)", lineHeight: 1 }}>
-          {["🪩","🏃","🏖️","🎨","🍻","⛺","🎭","🚴","🧘","🏄","🎸","🥾"].map((e, i) => <span key={i}>{e}</span>)}
-        </div>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,87,51,0.08), rgba(255,140,66,0.04))" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,87,51,0.15), transparent)" }} />
         {!isMe && (
           <>
@@ -1766,7 +1761,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 transition: "border 0.2s",
               }}>
-                <span>🏙 {editForm.location || "Select your city"}</span>
+                <span>{editForm.location || "Select your city"}</span>
                 <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginLeft: 8 }}>{showCityPicker ? "▲" : "▼"}</span>
               </button>
               {showCityPicker && (

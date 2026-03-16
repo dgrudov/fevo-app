@@ -77,8 +77,7 @@ export default function Auth({ onLogin }) {
 
       {/* Logo */}
       <div style={{ textAlign: "center", marginBottom: 40, position: "relative" }}>
-        <div style={{ fontSize: 56, marginBottom: 14, filter: "drop-shadow(0 0 30px rgba(255,87,51,0.5))" }}>🌍</div>
-        <h1 className="display" style={{ fontSize: 40, fontWeight: 700, letterSpacing: -1.5, color: "#fff" }}>Gruvio</h1>
+        <h1 className="display" style={{ fontSize: 52, fontWeight: 700, letterSpacing: -2, color: "#fff", filter: "drop-shadow(0 0 30px rgba(255,87,51,0.4))", marginBottom: 10 }}>Gruvio</h1>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 15, marginTop: 8 }}>Find your people. Go do things.</p>
       </div>
 
