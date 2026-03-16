@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Fevo</string>
-    <string name="title_activity_main">Fevo</string>
-    <string name="package_name">app.fevo</string>
-    <string name="custom_url_scheme">app.fevo</string>
+    <string name="app_name">Gruvio</string>
+    <string name="title_activity_main">Gruvio</string>
+    <string name="package_name">app.Gruvio</string>
+    <string name="custom_url_scheme">app.Gruvio</string>
 </resources>
