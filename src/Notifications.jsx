@@ -49,9 +49,12 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
     return `${days}d ago`;
   };
 
+  const ACTION_TYPES = ["join_request", "rate_squad", "buddy_request"];
+
   const getIcon = (type) => {
     switch (type) {
       case "join_request": return "👥";
+      case "join_info": return "👥";
       case "request_accepted": return "🎉";
       case "buddy_request": return "👋";
       case "buddy_accepted": return "🎉";
@@ -60,6 +63,7 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
       case "received_rating": return "⭐";
       case "spot_opened": return "🔔";
       case "new_message": return "💬";
+      case "new_event": return "🔥";
       default: return "📬";
     }
   };
@@ -95,13 +99,15 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
             <p style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>When someone requests to join your event or you get rated you'll see it here</p>
           </div>
         )}
-        {notifications.map(n => (
-          <div key={n.id} className="card shadow-sm" onClick={async () => {
+        {notifications.map(n => {
+          const isActionable = ACTION_TYPES.includes(n.type);
+          return (<div key={n.id} className="card shadow-sm" onClick={async () => {
             if (n.type === "join_request") onNavigate("requests");
+            if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
             if (n.type === "request_accepted") {
               await supabase.from("notifications").delete().eq("id", n.id);
               setNotifications(prev => prev.filter(notif => notif.id !== n.id));
-              onNavigate("explore");
+              if (n.data?.event_id) onOpenEvent(n.data.event_id); else onNavigate("explore");
             }
             if (n.type === "buddy_accepted") {
               await supabase.from("notifications").delete().eq("id", n.id);
@@ -112,16 +118,20 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
               setNotifications(prev => prev.filter(notif => notif.id !== n.id));
               if (n.data?.event_id) onOpenEvent(n.data.event_id);
             }
-            if (n.type === "rate_squad") onRateSquad(n.data?.event_id);
             if (n.type === "new_message") {
               await supabase.from("notifications").delete().eq("id", n.id);
               setNotifications(prev => prev.filter(notif => notif.id !== n.id));
               onOpenChat(n.data?.event_id);
             }
+            if (n.type === "join_info" || n.type === "new_event") {
+              await supabase.from("notifications").delete().eq("id", n.id);
+              setNotifications(prev => prev.filter(notif => notif.id !== n.id));
+              if (n.data?.event_id) onOpenEvent(n.data.event_id);
+            }
           }} style={{
             padding: "16px 18px", marginBottom: 10, cursor: "pointer",
-            borderLeft: n.read ? "none" : "3px solid var(--accent)",
-            background: n.read ? "var(--card)" : "rgba(255,87,51,0.06)",
+            borderLeft: !n.read && isActionable ? "3px solid var(--accent)" : "none",
+            background: !n.read && isActionable ? "rgba(255,87,51,0.06)" : "var(--card)",
           }}>
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <div style={{ fontSize: 24, flexShrink: 0 }}>{getIcon(n.type)}</div>
@@ -149,12 +159,12 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
                   <div style={{ marginTop: 8, fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>Tap to view event →</div>
                 )}
               </div>
-              {!n.read && n.type !== "buddy_request" && (
+              {!n.read && isActionable && n.type !== "buddy_request" && (
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", boxShadow: "0 0 6px var(--accent)", flexShrink: 0, marginTop: 4 }} />
               )}
             </div>
           </div>
-        ))}
+        );})}
       </div>
     </div>
   );

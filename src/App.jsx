@@ -471,7 +471,7 @@ export default function App() {
     if (error) { console.error(error); return; }
     setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
     setSelectedEvent({ ...event, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames });
-    await sendNotification(event.hostId, "join_request", "Someone joined your event", `${myName} joined ${event.emoji} ${event.title}`, { event_id: event.id });
+    await sendNotification(event.hostId, "join_info", "Someone joined your event", `${myName} joined ${event.emoji} ${event.title}`, { event_id: event.id });
     setToast("You joined!");
     setTimeout(() => setToast(null), 3000);
   };
