@@ -361,9 +361,21 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const loadRequests = async () => {
-      const { data, error } = await supabase.from("join_requests").select("*").eq("status", "pending");
+      const { data, error } = await supabase.from("join_requests").select("*, events(time)").eq("status", "pending");
       if (error) { console.error(error); return; }
-      setJoinRequests(data || []);
+      // Auto-delete pending requests for events that have already started
+      const now = new Date();
+      const startedIds = (data || []).filter(r => r.events?.time && new Date(r.events.time) < now).map(r => r.id);
+      if (startedIds.length > 0) {
+        await supabase.from("join_requests").delete().in("id", startedIds);
+        // Also clear the join_request notifications for those events
+        const startedEventIds = (data || []).filter(r => r.events?.time && new Date(r.events.time) < now).map(r => String(r.event_id));
+        for (const eid of startedEventIds) {
+          await supabase.from("notifications").delete().eq("user_id", user.id).eq("type", "join_request").filter("data->>event_id", "eq", eid);
+        }
+      }
+      const active = (data || []).filter(r => !r.events?.time || new Date(r.events.time) >= now);
+      setJoinRequests(active);
       setMyRequests(data.filter(r => r.user_id === user.id).map(r => r.event_id));
       const requesterIds = [...new Set(data.map(r => r.user_id).filter(Boolean))];
       if (requesterIds.length > 0) {
