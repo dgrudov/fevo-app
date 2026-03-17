@@ -38,6 +38,14 @@ const slides = [
     ],
   },
   {
+    id: "profile",
+    eyebrow: "YOUR PROFILE",
+    title: "Tell us\nabout you.",
+    subtitle: "This helps us show you the right events and people.",
+    bg: ["#0a0500", "#200900", "#301200"],
+    accent: "#ff5733",
+  },
+  {
     id: "interests",
     eyebrow: "PERSONALISE",
     title: "What are\nyou into?",
@@ -93,11 +101,17 @@ export default function Onboarding({ onFinish }) {
   const [step, setStep] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState([]);
+  const [name, setName] = useState("");
+  const [birthday, setBirthday] = useState("");
+  const [gender, setGender] = useState("");
   const touchStartX = useRef(null);
   const slide = slides[step];
   const isLast = step === slides.length - 1;
   const isInterests = slide.id === "interests";
-  const canProceed = !isInterests || selectedInterests.length > 0;
+  const isProfile = slide.id === "profile";
+
+  const profileValid = name.trim().length >= 2 && birthday && gender;
+  const canProceed = isInterests ? selectedInterests.length > 0 : isProfile ? profileValid : true;
 
   const goTo = (next) => {
     if (animating || next < 0 || next >= slides.length) return;
@@ -153,6 +167,16 @@ export default function Onboarding({ onFinish }) {
         .step-item-3 { animation: stepIn 0.4s ease 0.5s both; }
         .interest-card { transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .interest-card:active { transform: scale(0.95); }
+        .onboard-input {
+          width: 100%; padding: 14px 16px; border-radius: 14px;
+          background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.12);
+          color: #fff; font-size: 15px; font-family: 'DM Sans', sans-serif;
+          outline: none; transition: border-color 0.2s;
+        }
+        .onboard-input:focus { border-color: #ff5733; }
+        .onboard-input::placeholder { color: rgba(255,255,255,0.3); }
+        .gender-btn { transition: all 0.2s ease; }
+        .gender-btn:active { transform: scale(0.96); }
       `}</style>
 
       {slide.particles && <FloatingParticles emojis={slide.particles} accent={slide.accent} />}
@@ -164,7 +188,7 @@ export default function Onboarding({ onFinish }) {
       }} />
 
       {/* MAIN CONTENT */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: isInterests ? "40px 28px 0" : "40px 32px 0", position: "relative", zIndex: 2 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: (isInterests || isProfile) ? "40px 28px 0" : "40px 32px 0", position: "relative", zIndex: 2 }}>
 
         <div className="slide-content" style={{
           fontSize: 11, fontWeight: 800, letterSpacing: 3,
@@ -179,7 +203,7 @@ export default function Onboarding({ onFinish }) {
         )}
 
         <h1 className="slide-content" style={{
-          fontSize: isInterests ? 40 : 48, fontWeight: 900, color: "#fff",
+          fontSize: (isInterests || isProfile) ? 40 : 48, fontWeight: 900, color: "#fff",
           letterSpacing: -1.5, lineHeight: 1.05,
           marginBottom: 12, whiteSpace: "pre-line",
           fontFamily: "'Clash Display', 'Georgia', serif",
@@ -189,7 +213,7 @@ export default function Onboarding({ onFinish }) {
 
         <p className="slide-content" style={{
           fontSize: 15, color: "rgba(255,255,255,0.55)",
-          lineHeight: 1.6, maxWidth: 300, marginBottom: isInterests ? 24 : 0,
+          lineHeight: 1.6, maxWidth: 300, marginBottom: (isInterests || isProfile) ? 24 : 0,
           animationDelay: "0.1s",
         }}>{slide.subtitle}</p>
 
@@ -207,6 +231,57 @@ export default function Onboarding({ onFinish }) {
                 <div style={{ width: 6, height: 6, borderRadius: "50%", background: slide.accent, opacity: 0.5, marginLeft: "auto" }} />
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Profile step */}
+        {isProfile && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+            <div>
+              <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>YOUR NAME</label>
+              <input
+                className="onboard-input"
+                placeholder="What do people call you?"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                maxLength={30}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>DATE OF BIRTH</label>
+              <input
+                className="onboard-input"
+                type="date"
+                value={birthday}
+                onChange={e => setBirthday(e.target.value)}
+                max={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                style={{ colorScheme: "dark" }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>GENDER</label>
+              <div style={{ display: "flex", gap: 10 }}>
+                {["Male", "Female", "Other"].map(g => (
+                  <button
+                    key={g}
+                    className="gender-btn"
+                    onClick={() => setGender(g)}
+                    style={{
+                      flex: 1, padding: "12px 0", borderRadius: 14, fontSize: 14, fontWeight: 700,
+                      border: `1.5px solid ${gender === g ? "#ff5733" : "rgba(255,255,255,0.12)"}`,
+                      background: gender === g ? "rgba(255,87,51,0.15)" : "rgba(255,255,255,0.05)",
+                      color: gender === g ? "#ff5733" : "rgba(255,255,255,0.6)",
+                      cursor: "pointer",
+                    }}
+                  >{g}</button>
+                ))}
+              </div>
+            </div>
+            {!profileValid && (
+              <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+                Fill in all fields to continue
+              </p>
+            )}
           </div>
         )}
 
@@ -288,7 +363,7 @@ export default function Onboarding({ onFinish }) {
           <button
             onClick={() => {
               if (!canProceed) return;
-              if (isLast) onFinish(selectedInterests);
+              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), birthday, gender });
               else goTo(step + 1);
             }}
             style={{
@@ -303,7 +378,7 @@ export default function Onboarding({ onFinish }) {
               letterSpacing: 0.3, transition: "all 0.3s ease",
             }}
           >
-            {isLast ? "Find My Squad 🔥" : isInterests && selectedInterests.length > 0 ? `Continue with ${selectedInterests.length} interest${selectedInterests.length > 1 ? "s" : ""} →` : "Next →"}
+            {isLast ? "Find My Squad" : isInterests && selectedInterests.length > 0 ? `Continue with ${selectedInterests.length} interest${selectedInterests.length > 1 ? "s" : ""} →` : "Next →"}
           </button>
         </div>
       </div>

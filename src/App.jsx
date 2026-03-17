@@ -72,6 +72,7 @@ export default function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewingUser, setViewingUser] = useState(null);
   const [myName, setMyName] = useState("");
+  const [myGender, setMyGender] = useState("");
   const [myGroupSize, setMyGroupSize] = useState(1);
   const [joined, setJoined] = useState(null);
   const [createStep, setCreateStep] = useState(1);
@@ -213,12 +214,13 @@ export default function App() {
       if (session) {
         setUser(session.user);
         subscribeToPush(session.user.id);
-        supabase.from("profiles").select("full_name, onboarded, banned, interests, bio, avatar_url, location").eq("id", session.user.id).maybeSingle()
+        supabase.from("profiles").select("full_name, onboarded, banned, interests, bio, avatar_url, location, gender").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
             if (!data) return;
             if (data.banned === true) { setIsBanned(true); return; }
             setMyName(data.full_name || "");
             setMyInterests(data.interests || []);
+            setMyGender(data.gender || "");
 
             if (!data.onboarded) setShowOnboarding(true);
             if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
@@ -375,6 +377,7 @@ export default function App() {
   const filteredEvents = events.filter(e => {
     if (blockedIds.includes(e.hostId)) return false;
     if (e.joinType === "buddies" && e.hostId !== user?.id && !myBuddyIds.includes(e.hostId) && !e.members.includes(user?.id)) return false;
+    if (e.joinType === "women" && myGender !== "Female" && e.hostId !== user?.id && !e.members.includes(user?.id)) return false;
     if (filterCat === "For You") {
       if (myInterests.length > 0 && !myInterests.includes(e.category)) return false;
     } else if (filterCat !== "All") {
@@ -559,9 +562,10 @@ export default function App() {
     setMyName(name);
     if (isNewUser) setShowOnboarding(true);
     subscribeToPush(u.id);
-    const { data } = await supabase.from("profiles").select("interests, bio, avatar_url").eq("id", u.id).maybeSingle();
+    const { data } = await supabase.from("profiles").select("interests, bio, avatar_url, gender").eq("id", u.id).maybeSingle();
     if (data) {
       setMyInterests(data.interests || []);
+      setMyGender(data.gender || "");
       if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
     }
     setUser(u);
@@ -579,8 +583,12 @@ export default function App() {
   );
 
   if (showOnboarding) return (
-    <Onboarding onFinish={async (interests) => {
-      await supabase.from("profiles").update({ onboarded: true, interests }).eq("id", user.id);
+    <Onboarding onFinish={async ({ interests, name, birthday, gender }) => {
+      const updates = { onboarded: true, interests };
+      if (name) { updates.full_name = name; setMyName(name); }
+      if (birthday) updates.birthday = birthday;
+      if (gender) { updates.gender = gender; setMyGender(gender); }
+      await supabase.from("profiles").update(updates).eq("id", user.id);
       setMyInterests(interests);
       setShowOnboarding(false);
     }} />
@@ -763,6 +771,7 @@ export default function App() {
                   {event.vibe && <span className="chip">{event.vibe}</span>}
                   {event.joinType === "open" && <span className="chip" style={{ color: "#10b981", borderColor: "rgba(16,185,129,0.25)" }}>Open</span>}
                   {event.joinType === "buddies" && <span className="chip" style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.25)" }}>Buddies only</span>}
+                  {event.joinType === "women" && <span className="chip" style={{ color: "#f472b6", borderColor: "rgba(244,114,182,0.25)" }}>Women only</span>}
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1143,6 +1152,7 @@ export default function App() {
                       { value: "open", label: "Open", desc: "Anyone joins instantly — no approval needed" },
                       { value: "request", label: "Request to join", desc: "You approve each person before they join" },
                       { value: "buddies", label: "Buddies only", desc: "Only your buddies can see and join this event" },
+                      { value: "women", label: "Women only", desc: "Only women can see and join this event" },
                     ].map(opt => (
                       <div key={opt.value} onClick={() => setCreateForm({ ...createForm, joinType: opt.value })}
                         style={{ padding: "12px 14px", borderRadius: 13, border: `1.5px solid ${createForm.joinType === opt.value ? "var(--accent)" : "var(--border2)"}`, background: createForm.joinType === opt.value ? "rgba(255,87,51,0.07)" : "var(--card)", cursor: "pointer", transition: "all 0.15s" }}>
