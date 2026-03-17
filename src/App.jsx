@@ -75,7 +75,7 @@ export default function App() {
   const [myGroupSize, setMyGroupSize] = useState(1);
   const [joined, setJoined] = useState(null);
   const [createStep, setCreateStep] = useState(1);
-  const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });
+  const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "", joinType: "request" });
   const [activityFilter, setActivityFilter] = useState("All");
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
@@ -258,6 +258,7 @@ export default function App() {
         hostAvatar: e.host_name ? e.host_name[0].toUpperCase() : "?",
         hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
         members: e.members || [], memberNames: e.member_names || [],
+        joinType: e.join_type || "request",
       }));
       const activeEvents = formatted.filter(e => {
         if (!e.time || e.time === "TBD") return true;
@@ -373,6 +374,7 @@ export default function App() {
 
   const filteredEvents = events.filter(e => {
     if (blockedIds.includes(e.hostId)) return false;
+    if (e.joinType === "buddies" && e.hostId !== user?.id && !myBuddyIds.includes(e.hostId) && !e.members.includes(user?.id)) return false;
     if (filterCat === "For You") {
       if (myInterests.length > 0 && !myInterests.includes(e.category)) return false;
     } else if (filterCat !== "All") {
@@ -429,6 +431,22 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleDirectJoin = async (event) => {
+    if (!user) return;
+    if (event.members.includes(user.id)) return;
+    if (event.groupSize >= event.maxSize) { setToast("This event is full"); setTimeout(() => setToast(null), 3000); return; }
+    const updatedMembers = [...event.members, user.id];
+    const updatedNames = [...(event.memberNames || []), myName];
+    const updatedSize = event.groupSize + 1;
+    const { error } = await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", event.id);
+    if (error) { console.error(error); return; }
+    setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
+    setSelectedEvent({ ...event, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames });
+    await sendNotification(event.hostId, "join_request", "Someone joined your event", `${myName} joined ${event.emoji} ${event.title}`, { event_id: event.id });
+    setToast("You joined!");
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleLeave = async (event) => {
     if (!user) return;
     const updatedMembers = (event.members || []).filter(m => m !== user.id);
@@ -453,6 +471,7 @@ export default function App() {
       time: formattedTime, location: createForm.location || "TBD", vibe: createForm.vibe || "",
       group_size: 1, max_size: parseInt(createForm.maxSize) || 8,
       members: [user.id], member_names: [myName],
+      join_type: createForm.joinType || "request",
     };
     const { data, error } = await supabase.from("events").insert(newEvent).select().single();
     if (error) { console.error(error); return; }
@@ -461,9 +480,10 @@ export default function App() {
       host: data.host_name, hostId: data.host_id, hostAvatar: myName[0].toUpperCase(),
       hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
       members: data.members || [], memberNames: data.member_names || [],
+      joinType: data.join_type || "request",
     };
     setEvents([formatted, ...events]);
-    setCreateForm({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "" });
+    setCreateForm({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "", joinType: "request" });
     setCreateStep(1); setScreen("explore");
     setToast("Event created!");
     setTimeout(() => setToast(null), 3000);
@@ -740,7 +760,9 @@ export default function App() {
                   <span className="chip">🕐 {event.time && event.time !== "TBD" ? new Date(event.time).toLocaleString("bg-BG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : event.time}</span>
                   <span className="chip">📍 {event.location}</span>
 
-                  {event.vibe && <span className="chip">✨ {event.vibe}</span>}
+                  {event.vibe && <span className="chip">{event.vibe}</span>}
+                  {event.joinType === "open" && <span className="chip" style={{ color: "#10b981", borderColor: "rgba(16,185,129,0.25)" }}>Open</span>}
+                  {event.joinType === "buddies" && <span className="chip" style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.25)" }}>Buddies only</span>}
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1017,6 +1039,8 @@ export default function App() {
                   </div>
                 ) : selectedEvent.hostId === user?.id ? (
                   <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Rejoin Your Event</button>
+                ) : selectedEvent.joinType === "open" ? (
+                  <button className="btn" onClick={() => handleDirectJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Join</button>
                 ) : myRequests.includes(selectedEvent.id) ? (
                   <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(245,158,11,0.1)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)", textAlign: "center" }}>Request Pending</div>
                 ) : (
@@ -1111,6 +1135,25 @@ export default function App() {
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>MAX GROUP SIZE</label>
                   <select value={createForm.maxSize} onChange={e => setCreateForm({ ...createForm, maxSize: e.target.value })}>{[4, 6, 8, 10, 12, 15, 20, 30].map(n => <option key={n} value={n}>Up to {n} people</option>)}</select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 10, fontWeight: 700, letterSpacing: 1 }}>WHO CAN JOIN</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {[
+                      { value: "open", label: "Open", desc: "Anyone joins instantly — no approval needed" },
+                      { value: "request", label: "Request to join", desc: "You approve each person before they join" },
+                      { value: "buddies", label: "Buddies only", desc: "Only your buddies can see and join this event" },
+                    ].map(opt => (
+                      <div key={opt.value} onClick={() => setCreateForm({ ...createForm, joinType: opt.value })}
+                        style={{ padding: "12px 14px", borderRadius: 13, border: `1.5px solid ${createForm.joinType === opt.value ? "var(--accent)" : "var(--border2)"}`, background: createForm.joinType === opt.value ? "rgba(255,87,51,0.07)" : "var(--card)", cursor: "pointer", transition: "all 0.15s" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontWeight: 700, fontSize: 14, color: createForm.joinType === opt.value ? "var(--accent)" : "#fff" }}>{opt.label}</span>
+                          {createForm.joinType === opt.value && <span style={{ color: "var(--accent)", fontSize: 14, fontWeight: 700 }}>✓</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 3 }}>{opt.desc}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 {(!createForm.title || !createForm.time || !createForm.location) && (
                   <p style={{ textAlign: "center", fontSize: 13, color: "var(--text3)" }}>{!createForm.title ? "Add a title to continue" : !createForm.time ? "Pick a date and time to continue" : "Add a venue to continue"}</p>
