@@ -102,15 +102,31 @@ export default function Onboarding({ onFinish }) {
   const [animating, setAnimating] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState("");
   const [birthday, setBirthday] = useState("");
   const [gender, setGender] = useState("");
   const touchStartX = useRef(null);
   const slide = slides[step];
   const isLast = step === slides.length - 1;
+
+  const handleNameChange = (val) => {
+    setName(val);
+    const suggested = val.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    setUsername(suggested);
+    setUsernameError("");
+  };
+
+  const handleUsernameChange = (val) => {
+    const clean = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    setUsername(clean);
+    if (clean.length > 0 && clean.length < 3) setUsernameError("At least 3 characters");
+    else setUsernameError("");
+  };
   const isInterests = slide.id === "interests";
   const isProfile = slide.id === "profile";
 
-  const profileValid = name.trim().length >= 2 && birthday && gender;
+  const profileValid = name.trim().length >= 2 && username.length >= 3 && !usernameError && birthday && gender;
   const canProceed = isInterests ? selectedInterests.length > 0 : isProfile ? profileValid : true;
 
   const goTo = (next) => {
@@ -243,9 +259,24 @@ export default function Onboarding({ onFinish }) {
                 className="onboard-input"
                 placeholder="What do people call you?"
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={e => handleNameChange(e.target.value)}
                 maxLength={30}
               />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>USERNAME</label>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.35)", fontSize: 15 }}>@</span>
+                <input
+                  className="onboard-input"
+                  placeholder="your_username"
+                  value={username}
+                  onChange={e => handleUsernameChange(e.target.value)}
+                  maxLength={24}
+                  style={{ paddingLeft: 28 }}
+                />
+              </div>
+              {usernameError && <div style={{ fontSize: 12, color: "#f87171", marginTop: 5 }}>{usernameError}</div>}
             </div>
             <div>
               <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>DATE OF BIRTH</label>
@@ -363,7 +394,7 @@ export default function Onboarding({ onFinish }) {
           <button
             onClick={() => {
               if (!canProceed) return;
-              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), birthday, gender });
+              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), username, birthday, gender });
               else goTo(step + 1);
             }}
             style={{

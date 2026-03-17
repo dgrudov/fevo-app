@@ -72,6 +72,7 @@ export default function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewingUser, setViewingUser] = useState(null);
   const [myName, setMyName] = useState("");
+  const [myUsername, setMyUsername] = useState("");
   const [myGender, setMyGender] = useState("");
   const [myGroupSize, setMyGroupSize] = useState(1);
   const [joined, setJoined] = useState(null);
@@ -214,11 +215,12 @@ export default function App() {
       if (session) {
         setUser(session.user);
         subscribeToPush(session.user.id);
-        supabase.from("profiles").select("full_name, onboarded, banned, interests, bio, avatar_url, location, gender").eq("id", session.user.id).maybeSingle()
+        supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
             if (!data) return;
             if (data.banned === true) { setIsBanned(true); return; }
             setMyName(data.full_name || "");
+            setMyUsername(data.username || "");
             setMyInterests(data.interests || []);
             setMyGender(data.gender || "");
 
@@ -562,10 +564,11 @@ export default function App() {
     setMyName(name);
     if (isNewUser) setShowOnboarding(true);
     subscribeToPush(u.id);
-    const { data } = await supabase.from("profiles").select("interests, bio, avatar_url, gender").eq("id", u.id).maybeSingle();
+    const { data } = await supabase.from("profiles").select("interests, bio, avatar_url, gender, username").eq("id", u.id).maybeSingle();
     if (data) {
       setMyInterests(data.interests || []);
       setMyGender(data.gender || "");
+      setMyUsername(data.username || "");
       if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
     }
     setUser(u);
@@ -583,9 +586,10 @@ export default function App() {
   );
 
   if (showOnboarding) return (
-    <Onboarding onFinish={async ({ interests, name, birthday, gender }) => {
+    <Onboarding onFinish={async ({ interests, name, username, birthday, gender }) => {
       const updates = { onboarded: true, interests };
       if (name) { updates.full_name = name; setMyName(name); }
+      if (username) { updates.username = username; setMyUsername(username); }
       if (birthday) updates.birthday = birthday;
       if (gender) { updates.gender = gender; setMyGender(gender); }
       await supabase.from("profiles").update(updates).eq("id", user.id);
@@ -1623,7 +1627,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [allUserEvents, setAllUserEvents] = useState([]);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ full_name: "", bio: "", location: "", age: "", instagram: "", interests: [] });
+  const [editForm, setEditForm] = useState({ full_name: "", username: "", bio: "", location: "", instagram: "", interests: [] });
   const [profilePhotos, setProfilePhotos] = useState([]);
   const [profilePhotoLightbox, setProfilePhotoLightbox] = useState(null);
   const profileTouchStart = useRef(0);
@@ -1664,10 +1668,11 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   };
 
   const saveProfile = async () => {
-    const { error } = await supabase.from("profiles").update({ full_name: editForm.full_name, bio: editForm.bio, location: editForm.location, age: editForm.age ? parseInt(editForm.age) : null, instagram: editForm.instagram, interests: editForm.interests }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ full_name: editForm.full_name, username: editForm.username || null, bio: editForm.bio, location: editForm.location, instagram: editForm.instagram, interests: editForm.interests }).eq("id", user.id);
     if (error) { console.error(error); return; }
     setProfile({ ...profile, ...editForm });
     if (editForm.full_name && editForm.full_name !== myName) setMyName(editForm.full_name);
+    if (editForm.username) setMyUsername(editForm.username);
     setMyInterests(editForm.interests);
     setEditing(false);
   };
@@ -1679,7 +1684,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
         if (data) {
           setProfile(data);
           if (data.avatar_url) setAvatarUrl(data.avatar_url);
-          setEditForm({ full_name: data.full_name || "", bio: data.bio || "", location: data.location || "", age: data.age || "", instagram: data.instagram || "", interests: data.interests || [] });
+          setEditForm({ full_name: data.full_name || "", username: data.username || "", bio: data.bio || "", location: data.location || "", instagram: data.instagram || "", interests: data.interests || [] });
         }
       });
     supabase.from("events").select("*").order("created_at", { ascending: false })
@@ -1746,7 +1751,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
   };
 
   const displayName = isMe ? myName : (profile?.full_name || user?.name || "");
-  const displayUsername = isMe ? (myName ? myName.toLowerCase().replace(/\s+/g, "") : "you") : (profile?.username || "");
+  const displayUsername = isMe ? (myUsername || (myName ? myName.toLowerCase().replace(/\s+/g, "") : "you")) : (profile?.username || profile?.full_name?.toLowerCase().replace(/\s+/g, "") || "");
 
   return (
     <>
@@ -1802,6 +1807,10 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
         {editing ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <input value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} placeholder="Your name" />
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text3)", fontSize: 15 }}>@</span>
+              <input value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24) })} placeholder="username" style={{ paddingLeft: 28 }} />
+            </div>
             <textarea value={editForm.bio} onChange={e => setEditForm({ ...editForm, bio: e.target.value })} placeholder="Write a short bio..." rows={3} style={{ resize: "none" }} />
             <div style={{ position: "relative" }}>
               {showCityPicker && (
@@ -1841,7 +1850,6 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
                 </div>
               )}
             </div>
-            <input value={editForm.age} onChange={e => setEditForm({ ...editForm, age: e.target.value })} placeholder="Your age" type="number" min="16" max="99" />
             <input value={editForm.instagram} onChange={e => setEditForm({ ...editForm, instagram: e.target.value.replace("@", "") })} placeholder="Instagram username (without @)" />
             <div>
               <div style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>INTERESTS</div>
@@ -1909,8 +1917,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
             {profile?.bio && <p style={{ fontSize: 14, color: "var(--text2)", marginTop: 8, lineHeight: 1.6 }}>{profile.bio}</p>}
             <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
               {profile?.location && <span style={{ fontSize: 12, color: "var(--text3)" }}>📍 {profile.location}</span>}
-              {profile?.age && <span style={{ fontSize: 12, color: "var(--text3)" }}>🎂 {profile.age} years old</span>}
-              {profile?.instagram && (
+                {profile?.instagram && (
                 <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "var(--text3)", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="currentColor" strokeWidth="2" fill="none"/><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" fill="none"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>
                   @{profile.instagram}
