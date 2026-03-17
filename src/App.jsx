@@ -122,7 +122,11 @@ export default function App() {
   };
 
   const navigateTo = (newScreen, opts = {}) => {
-    window.history.pushState({ screen: newScreen }, "", window.location.href);
+    const eventId = opts.event?.id ?? (newScreen === "event" ? selectedEvent?.id : null);
+    const newUrl = newScreen === "event" && eventId
+      ? `${window.location.pathname}?event=${eventId}`
+      : window.location.pathname;
+    window.history.pushState({ screen: newScreen }, "", newUrl);
     setScreen(newScreen);
     if (opts.event !== undefined) {
       setSelectedEvent(opts.event);
