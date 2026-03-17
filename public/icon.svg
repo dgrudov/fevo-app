@@ -1,45 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a0d05"/>
-      <stop offset="100%" style="stop-color:#0a0805"/>
-    </linearGradient>
-    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ff5733"/>
-      <stop offset="100%" style="stop-color:#ff8c42"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="45%" r="55%">
-      <stop offset="0%" style="stop-color:#ff5733;stop-opacity:0.2"/>
-      <stop offset="100%" style="stop-color:#ff5733;stop-opacity:0"/>
-    </radialGradient>
-    <filter id="blur">
-      <feGaussianBlur stdDeviation="18"/>
-    </filter>
-  </defs>
-
-  <!-- Background -->
-  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
-
-  <!-- Soft glow blob -->
-  <ellipse cx="256" cy="230" rx="180" ry="160" fill="url(#glow)" filter="url(#blur)"/>
-
-  <!-- Outer ring -->
-  <circle cx="256" cy="256" r="168" fill="none" stroke="url(#accent)" stroke-width="3" opacity="0.15"/>
-
-  <!-- Inner ring -->
-  <circle cx="256" cy="256" r="140" fill="none" stroke="url(#accent)" stroke-width="1.5" opacity="0.08"/>
-
-  <!-- G letter — bold, centered -->
-  <text
-    x="256" y="318"
-    font-family="Arial Black, Helvetica Neue, sans-serif"
-    font-size="220"
-    font-weight="900"
-    fill="url(#accent)"
-    text-anchor="middle"
-    letter-spacing="-8"
-  >G</text>
-
-  <!-- Subtle bottom line accent -->
-  <line x1="156" y1="370" x2="356" y2="370" stroke="url(#accent)" stroke-width="3" stroke-linecap="round" opacity="0.25"/>
+<svg width="100%" viewBox="0 0 680 680" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#ffb347"/>
+    <stop offset="55%" stop-color="#f4600c"/>
+    <stop offset="100%" stop-color="#d44000"/>
+  </radialGradient>
+  <clipPath id="circleClip">
+    <circle cx="340" cy="340" r="290"/>
+  </clipPath>
+</defs>
+<circle cx="340" cy="340" r="290" fill="url(#bgGrad)"/>
+<circle cx="340" cy="340" r="290" fill="none" stroke="#e85a0a" stroke-width="8" stroke-dasharray="6 4" opacity="0.3"/>
+<path d="M252 148 Q262 138 274 143 Q261 148 261 160 Q254 155 252 148Z" fill="#fff" opacity="0.9"/>
+<polygon points="340,148 406,268 274,268" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" opacity="0.95"/>
+<line x1="307" y1="208" x2="274" y2="268" stroke="#fff" stroke-width="1.5" opacity="0.6"/>
+<polygon points="340,148 355,178 325,178" fill="#fff" opacity="0.25"/>
+<line x1="340" y1="220" x2="340" y2="268" stroke="#fff" stroke-width="1.5" opacity="0.9"/>
+<polygon points="340,205 352,228 328,228" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" opacity="0.9"/>
+<polygon points="340,218 355,244 325,244" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" opacity="0.9"/>
+<line x1="314" y1="232" x2="314" y2="268" stroke="#fff" stroke-width="1.5" opacity="0.85"/>
+<polygon points="314,218 324,238 304,238" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" opacity="0.85"/>
+<polygon points="314,230 326,252 302,252" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" opacity="0.85"/>
+<line x1="366" y1="232" x2="366" y2="268" stroke="#fff" stroke-width="1.5" opacity="0.85"/>
+<polygon points="366,218 376,238 356,238" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" opacity="0.85"/>
+<polygon points="366,230 378,252 354,252" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" opacity="0.85"/>
+<line x1="292" y1="244" x2="292" y2="268" stroke="#fff" stroke-width="1.2" opacity="0.7"/>
+<polygon points="292,234 300,250 284,250" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" opacity="0.7"/>
+<polygon points="292,244 302,262 282,262" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" opacity="0.7"/>
+<line x1="388" y1="244" x2="388" y2="268" stroke="#fff" stroke-width="1.2" opacity="0.7"/>
+<polygon points="388,234 396,250 380,250" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" opacity="0.7"/>
+<polygon points="388,244 398,262 378,262" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" opacity="0.7"/>
+<polygon points="340,252 328,268 352,268" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" opacity="0.95"/>
+<line x1="340" y1="252" x2="340" y2="268" stroke="#fff" stroke-width="1" opacity="0.6"/>
+<line x1="255" y1="268" x2="425" y2="268" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+<path d="M255 268 Q270 262 285 268" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.5"/>
+<path d="M395 268 Q410 262 425 268" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.5"/>
+<text x="340" y="360" text-anchor="middle" font-family="Georgia, serif" font-size="80" font-weight="700" fill="#fff" letter-spacing="4" opacity="0.97">GRUVIO</text>
+<text x="340" y="400" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#fff" letter-spacing="3" opacity="0.7">GO FIND YOUR BUDDIES</text>
 </svg>
