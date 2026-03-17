@@ -381,10 +381,8 @@ export default function App() {
   const filteredEvents = events.filter(e => {
     if (blockedIds.includes(e.hostId)) return false;
     if (e.joinType === "buddies" && e.hostId !== user?.id && !myBuddyIds.includes(e.hostId) && !e.members.includes(user?.id)) return false;
-    if (e.joinType === "women" && myGender !== "Female" && e.hostId !== user?.id && !e.members.includes(user?.id)) return false;
-    // Hide events that have fully ended
-    const eventEndTime = e.endTime ? new Date(e.endTime) : (e.time && e.time !== "TBD" ? new Date(new Date(e.time).getTime() + (e.durationHours || 2) * 3600000) : null);
-    if (eventEndTime && eventEndTime < new Date()) return false;
+    // Hide events that have fully ended (only if end_time explicitly stored in DB)
+    if (e.endTime && new Date(e.endTime) < new Date()) return false;
     if (filterCat === "For You") {
       if (myInterests.length > 0 && !myInterests.includes(e.category)) return false;
     } else if (filterCat !== "All") {
@@ -1026,7 +1024,7 @@ export default function App() {
           )}
 
           {(() => {
-            const isPast = selectedEvent.endTime ? new Date(selectedEvent.endTime) < new Date() : (selectedEvent.time && selectedEvent.time !== "TBD" && new Date(selectedEvent.time) < new Date());
+            const isPast = selectedEvent.endTime ? new Date(selectedEvent.endTime) < new Date() : false;
             const isOngoing = !isPast && selectedEvent.time && selectedEvent.time !== "TBD" && new Date(selectedEvent.time) < new Date();
             if (isPast) {
               const wasAttending = selectedEvent.members.includes(user?.id);
@@ -1068,6 +1066,8 @@ export default function App() {
                   </div>
                 ) : selectedEvent.hostId === user?.id ? (
                   <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Rejoin Your Event</button>
+                ) : selectedEvent.joinType === "women" && myGender !== "Female" ? (
+                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "rgba(244,114,182,0.08)", color: "#f472b6", border: "1px solid rgba(244,114,182,0.2)", textAlign: "center" }}>This event is for women only</div>
                 ) : hasStarted ? (
                   <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", textAlign: "center" }}>Event already started</div>
                 ) : selectedEvent.joinType === "open" ? (
@@ -2126,7 +2126,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
             ...myEvents.map(e => ({ ...e, role: "hosted" })),
             ...joinedEvents.map(e => ({ ...e, role: "joined" })),
           ].sort((a, b) => new Date(b.time) - new Date(a.time));
-          const getEndTime = (e) => e.endTime ? new Date(e.endTime) : (e.time && e.time !== "TBD" ? new Date(new Date(e.time).getTime() + (e.durationHours || 2) * 3600000) : null);
+          const getEndTime = (e) => e.endTime ? new Date(e.endTime) : (e.time && e.time !== "TBD" ? new Date(e.time) : null);
           const upcomingEvents = allEvents.filter(e => { const et = getEndTime(e); return et ? et >= now : true; });
           const pastEvents = allEvents.filter(e => { const et = getEndTime(e); return et ? et < now : false; });
 
