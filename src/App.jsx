@@ -381,8 +381,8 @@ export default function App() {
   const filteredEvents = events.filter(e => {
     if (blockedIds.includes(e.hostId)) return false;
     if (e.joinType === "buddies" && e.hostId !== user?.id && !myBuddyIds.includes(e.hostId) && !e.members.includes(user?.id)) return false;
-    // Hide events that have fully ended (only if end_time explicitly stored in DB)
-    if (e.endTime && new Date(e.endTime) < new Date()) return false;
+    // Hide events that have started or ended
+    if (e.time && e.time !== "TBD" && new Date(e.time) < new Date()) return false;
     if (filterCat === "For You") {
       if (myInterests.length > 0 && !myInterests.includes(e.category)) return false;
     } else if (filterCat !== "All") {
@@ -399,11 +399,9 @@ export default function App() {
     const saturday = new Date(today); saturday.setDate(today.getDate() + daysUntilSat);
     const endOfSunday = new Date(saturday); endOfSunday.setDate(saturday.getDate() + 1); endOfSunday.setHours(23, 59, 59, 999);
     const endOfWeek = new Date(today); endOfWeek.setDate(today.getDate() + 7);
-    const eventEndTime = e.endTime ? new Date(e.endTime) : null;
-    const isOngoingEvent = t < new Date() && eventEndTime && eventEndTime > new Date();
-    if (filterDate === "today") return (t >= today && t < tomorrow) || isOngoingEvent;
+    if (filterDate === "today") return t >= today && t < tomorrow;
     if (filterDate === "tomorrow") return t >= tomorrow && t < dayAfterTomorrow;
-    if (filterDate === "week") return (t >= today && t < endOfWeek) || isOngoingEvent;
+    if (filterDate === "week") return t >= today && t < endOfWeek;
     if (filterDate === "pick" && filterPickedDate) {
       const picked = new Date(filterPickedDate); picked.setHours(0, 0, 0, 0);
       const pickedEnd = new Date(picked); pickedEnd.setDate(picked.getDate() + 1);
@@ -1108,7 +1106,7 @@ export default function App() {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                   {ACTIVITY_TYPES.filter(t => activityFilter === "All" || t.category === activityFilter).map(type => (
-                    <div key={type.label} className="activity-type-btn" onClick={() => { setCreateForm({ ...createForm, type: type.label, category: type.category }); setCreateStep(2); }} style={{ background: createForm.type === type.label ? `${type.color}15` : "var(--card)", border: createForm.type === type.label ? `2px solid ${type.color}` : "1px solid var(--border2)", boxShadow: createForm.type === type.label ? `0 0 20px ${type.color}25` : "none" }}>
+                    <div key={type.label} className="activity-type-btn" onClick={() => { setCreateForm({ ...createForm, type: type.label, category: type.category, title: "" }); setCreateStep(2); }} style={{ background: createForm.type === type.label ? `${type.color}15` : "var(--card)", border: createForm.type === type.label ? `2px solid ${type.color}` : "1px solid var(--border2)", boxShadow: createForm.type === type.label ? `0 0 20px ${type.color}25` : "none" }}>
                       <span style={{ fontSize: 26 }}>{type.emoji}</span>
                       <span style={{ fontSize: 11, fontWeight: 600, textAlign: "center", lineHeight: 1.3, color: createForm.type === type.label ? type.color : "var(--text2)" }}>{type.label}</span>
                     </div>
