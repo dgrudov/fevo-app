@@ -847,7 +847,7 @@ export default function App() {
             </div>
           </div>
 
-          {selectedEvent.hostId === user?.id && (
+          {selectedEvent.hostId === user?.id && (!selectedEvent.time || selectedEvent.time === "TBD" || new Date(selectedEvent.time) > new Date()) && (
             <div style={{ margin: "12px 16px 0", display: "flex", gap: 8 }}>
               <button className="btn" onClick={() => {
                 setEditEventForm({
@@ -1269,7 +1269,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} />
+        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} onNavigateEvent={(event) => { setProfileViewReturn("profile"); navigateTo("event", { event }); }} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1563,7 +1563,7 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile, onNavigateEvent }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -2046,7 +2046,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, 
           const pastEvents = allEvents.filter(e => !e.time || e.time === "TBD" || new Date(e.time) < now);
 
           const EventRow = ({ e }) => (
-            <div className="card shadow-sm" style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center" }}>
+            <div className="card shadow-sm btn" onClick={() => onNavigateEvent && onNavigateEvent(e)} style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center", cursor: "pointer" }}>
               <div style={{ width: 46, height: 46, borderRadius: 13, fontSize: 21, display: "flex", alignItems: "center", justifyContent: "center", background: `${e.color || "var(--accent)"}18`, border: `1px solid ${e.color || "var(--accent)"}25`, flexShrink: 0 }}>{e.emoji}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.title}</div>
