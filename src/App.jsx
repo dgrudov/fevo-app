@@ -77,7 +77,7 @@ export default function App() {
   const [myGroupSize, setMyGroupSize] = useState(1);
   const [joined, setJoined] = useState(null);
   const [createStep, setCreateStep] = useState(1);
-  const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "", joinType: "request" });
+  const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "", joinType: "request", durationHours: 2 });
   const [activityFilter, setActivityFilter] = useState("All");
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
@@ -263,6 +263,8 @@ export default function App() {
         hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
         members: e.members || [], memberNames: e.member_names || [],
         joinType: e.join_type || "request",
+        durationHours: e.duration_hours || 2,
+        endTime: e.end_time || null,
       }));
       const activeEvents = formatted.filter(e => {
         if (!e.time || e.time === "TBD") return true;
@@ -380,6 +382,9 @@ export default function App() {
     if (blockedIds.includes(e.hostId)) return false;
     if (e.joinType === "buddies" && e.hostId !== user?.id && !myBuddyIds.includes(e.hostId) && !e.members.includes(user?.id)) return false;
     if (e.joinType === "women" && myGender !== "Female" && e.hostId !== user?.id && !e.members.includes(user?.id)) return false;
+    // Hide events that have fully ended
+    const eventEndTime = e.endTime ? new Date(e.endTime) : (e.time && e.time !== "TBD" ? new Date(new Date(e.time).getTime() + (e.durationHours || 2) * 3600000) : null);
+    if (eventEndTime && eventEndTime < new Date()) return false;
     if (filterCat === "For You") {
       if (myInterests.length > 0 && !myInterests.includes(e.category)) return false;
     } else if (filterCat !== "All") {
@@ -470,6 +475,9 @@ export default function App() {
   const handleCreate = async () => {
     if (!createForm.title || !myName || !createForm.type || !createForm.time || !createForm.location) return;
     const typeData = ACTIVITY_TYPES.find(t => t.label === createForm.type) || ACTIVITY_TYPES[0];
+    const durationHours = createForm.durationHours || 2;
+    const startDate = new Date(createForm.time);
+    const endTime = new Date(startDate.getTime() + durationHours * 60 * 60 * 1000).toISOString();
     const newEvent = {
       title: createForm.title, type: createForm.type, emoji: typeData.emoji,
       category: typeData.category, color: typeData.color, host_id: user.id, host_name: myName,
@@ -477,6 +485,8 @@ export default function App() {
       group_size: 1, max_size: parseInt(createForm.maxSize) || 8,
       members: [user.id], member_names: [myName],
       join_type: createForm.joinType || "request",
+      duration_hours: durationHours,
+      end_time: endTime,
     };
     const { data, error } = await supabase.from("events").insert(newEvent).select().single();
     if (error) { console.error(error); return; }
@@ -486,9 +496,11 @@ export default function App() {
       hostGradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
       members: data.members || [], memberNames: data.member_names || [],
       joinType: data.join_type || "request",
+      durationHours: data.duration_hours || 2,
+      endTime: data.end_time || null,
     };
     setEvents([formatted, ...events]);
-    setCreateForm({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "", joinType: "request" });
+    setCreateForm({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "", joinType: "request", durationHours: 2 });
     setCreateStep(1); setScreen("explore");
     setToast("Event created!");
     setTimeout(() => setToast(null), 3000);
@@ -776,6 +788,7 @@ export default function App() {
                   {event.joinType === "open" && <span className="chip" style={{ color: "#10b981", borderColor: "rgba(16,185,129,0.25)" }}>Open</span>}
                   {event.joinType === "buddies" && <span className="chip" style={{ color: "#a78bfa", borderColor: "rgba(167,139,250,0.25)" }}>Buddies only</span>}
                   {event.joinType === "women" && <span className="chip" style={{ color: "#f472b6", borderColor: "rgba(244,114,182,0.25)" }}>Women only</span>}
+                  {event.time && event.time !== "TBD" && new Date(event.time) < new Date() && <span className="chip" style={{ color: "#fb923c", borderColor: "rgba(251,146,60,0.25)" }}>Ongoing</span>}
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1013,7 +1026,8 @@ export default function App() {
           )}
 
           {(() => {
-            const isPast = selectedEvent.time && selectedEvent.time !== "TBD" && new Date(selectedEvent.time) < new Date();
+            const isPast = selectedEvent.endTime ? new Date(selectedEvent.endTime) < new Date() : (selectedEvent.time && selectedEvent.time !== "TBD" && new Date(selectedEvent.time) < new Date());
+            const isOngoing = !isPast && selectedEvent.time && selectedEvent.time !== "TBD" && new Date(selectedEvent.time) < new Date();
             if (isPast) {
               const wasAttending = selectedEvent.members.includes(user?.id);
               return (
@@ -1035,8 +1049,10 @@ export default function App() {
                 </div>
               );
             }
+            const hasStarted = selectedEvent.time && selectedEvent.time !== "TBD" && new Date(selectedEvent.time) < new Date();
             return (
               <div className="card shadow-sm" style={{ margin: "12px 16px 0", padding: 18 }}>
+                {isOngoing && <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 10, background: "rgba(251,146,60,0.1)", border: "1px solid rgba(251,146,60,0.2)", fontSize: 13, fontWeight: 700, color: "#fb923c", textAlign: "center" }}>This event is happening now</div>}
                 <p style={{ fontWeight: 700, marginBottom: 14, fontSize: 11, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase" }}>Join this squad</p>
                 {selectedEvent.members.includes(user?.id) ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1052,6 +1068,8 @@ export default function App() {
                   </div>
                 ) : selectedEvent.hostId === user?.id ? (
                   <button className="btn" onClick={() => handleJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Rejoin Your Event</button>
+                ) : hasStarted ? (
+                  <div style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "var(--bg3)", color: "var(--text3)", border: "1px solid var(--border2)", textAlign: "center" }}>Event already started</div>
                 ) : selectedEvent.joinType === "open" ? (
                   <button className="btn" onClick={() => handleDirectJoin(selectedEvent)} style={{ width: "100%", padding: 15, borderRadius: 14, fontSize: 15, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", boxShadow: "0 8px 24px rgba(255,87,51,0.35)" }}>Join</button>
                 ) : myRequests.includes(selectedEvent.id) ? (
@@ -1148,6 +1166,12 @@ export default function App() {
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>MAX GROUP SIZE</label>
                   <select value={createForm.maxSize} onChange={e => setCreateForm({ ...createForm, maxSize: e.target.value })}>{[4, 6, 8, 10, 12, 15, 20, 30].map(n => <option key={n} value={n}>Up to {n} people</option>)}</select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>DURATION</label>
+                  <select value={createForm.durationHours} onChange={e => setCreateForm({ ...createForm, durationHours: parseFloat(e.target.value) })}>
+                    {[{ v: 1, l: "1 hour" }, { v: 2, l: "2 hours" }, { v: 3, l: "3 hours" }, { v: 4, l: "4 hours" }, { v: 6, l: "6 hours" }, { v: 8, l: "All day (8h)" }, { v: 48, l: "Weekend (2 days)" }].map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 10, fontWeight: 700, letterSpacing: 1 }}>WHO CAN JOIN</label>
@@ -2102,8 +2126,9 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
             ...myEvents.map(e => ({ ...e, role: "hosted" })),
             ...joinedEvents.map(e => ({ ...e, role: "joined" })),
           ].sort((a, b) => new Date(b.time) - new Date(a.time));
-          const upcomingEvents = allEvents.filter(e => e.time && e.time !== "TBD" && new Date(e.time) >= now);
-          const pastEvents = allEvents.filter(e => !e.time || e.time === "TBD" || new Date(e.time) < now);
+          const getEndTime = (e) => e.endTime ? new Date(e.endTime) : (e.time && e.time !== "TBD" ? new Date(new Date(e.time).getTime() + (e.durationHours || 2) * 3600000) : null);
+          const upcomingEvents = allEvents.filter(e => { const et = getEndTime(e); return et ? et >= now : true; });
+          const pastEvents = allEvents.filter(e => { const et = getEndTime(e); return et ? et < now : false; });
 
           const EventRow = ({ e }) => (
             <div className="card shadow-sm btn" onClick={() => onNavigateEvent && onNavigateEvent(e)} style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center", cursor: "pointer" }}>
