@@ -756,9 +756,6 @@ export default function App() {
           <div style={{ padding: "8px 16px 0" }}>
             {filteredEvents.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                <div style={{ fontSize: 48, marginBottom: 16, filter: "grayscale(0.3)" }}>
-                  {"·"}
-                </div>
                 <p className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text2)", marginBottom: 8 }}>No events found</p>
                 <p style={{ fontSize: 14, color: "var(--text3)", lineHeight: 1.5 }}>
                   {filterCat === "For You"
