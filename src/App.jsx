@@ -399,9 +399,11 @@ export default function App() {
     const saturday = new Date(today); saturday.setDate(today.getDate() + daysUntilSat);
     const endOfSunday = new Date(saturday); endOfSunday.setDate(saturday.getDate() + 1); endOfSunday.setHours(23, 59, 59, 999);
     const endOfWeek = new Date(today); endOfWeek.setDate(today.getDate() + 7);
-    if (filterDate === "today") return t >= today && t < tomorrow;
+    const eventEndTime = e.endTime ? new Date(e.endTime) : null;
+    const isOngoingEvent = t < new Date() && eventEndTime && eventEndTime > new Date();
+    if (filterDate === "today") return (t >= today && t < tomorrow) || isOngoingEvent;
     if (filterDate === "tomorrow") return t >= tomorrow && t < dayAfterTomorrow;
-    if (filterDate === "week") return t >= today && t < endOfWeek;
+    if (filterDate === "week") return (t >= today && t < endOfWeek) || isOngoingEvent;
     if (filterDate === "pick" && filterPickedDate) {
       const picked = new Date(filterPickedDate); picked.setHours(0, 0, 0, 0);
       const pickedEnd = new Date(picked); pickedEnd.setDate(picked.getDate() + 1);
@@ -1180,7 +1182,7 @@ export default function App() {
                       { value: "open", label: "Open", desc: "Anyone joins instantly — no approval needed" },
                       { value: "request", label: "Request to join", desc: "You approve each person before they join" },
                       { value: "buddies", label: "Buddies only", desc: "Only your buddies can see and join this event" },
-                      { value: "women", label: "Women only", desc: "Only women can see and join this event" },
+                      ...(myGender === "Female" ? [{ value: "women", label: "Women only", desc: "Only women can see and join this event" }] : []),
                     ].map(opt => (
                       <div key={opt.value} onClick={() => setCreateForm({ ...createForm, joinType: opt.value })}
                         style={{ padding: "12px 14px", borderRadius: 13, border: `1.5px solid ${createForm.joinType === opt.value ? "var(--accent)" : "var(--border2)"}`, background: createForm.joinType === opt.value ? "rgba(255,87,51,0.07)" : "var(--card)", cursor: "pointer", transition: "all 0.15s" }}>
