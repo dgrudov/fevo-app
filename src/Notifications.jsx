@@ -14,7 +14,7 @@ export default function Notifications({ user, myName, onBack, onNavigate, onRate
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      if (error) { console.error(error); return; }
+      if (error) { console.error(error); setLoading(false); return; }
       setNotifications(data || []);
       setLoading(false);
       await supabase.from("notifications").update({ read: true })
