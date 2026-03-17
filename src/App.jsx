@@ -271,6 +271,7 @@ export default function App() {
         endTime: e.end_time || null,
       }));
       const activeEvents = formatted.filter(e => {
+        if (e.members.includes(user.id) || e.hostId === user.id) return true;
         if (!e.time || e.time === "TBD") return true;
         const parsed = new Date(e.time);
         if (isNaN(parsed.getTime())) return true;
@@ -466,7 +467,7 @@ export default function App() {
     const updatedMembers = [...event.members, user.id];
     const updatedNames = [...(event.memberNames || []), myName];
     const updatedSize = event.groupSize + 1;
-    const { error } = await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", event.id);
+    const { error } = await supabase.rpc("join_open_event", { p_event_id: event.id, p_user_id: user.id, p_user_name: myName });
     if (error) { console.error(error); return; }
     setEvents(events.map(e => e.id === event.id ? { ...e, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames } : e));
     setSelectedEvent({ ...event, groupSize: updatedSize, members: updatedMembers, memberNames: updatedNames });
