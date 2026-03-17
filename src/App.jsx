@@ -1326,7 +1326,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} onNavigateEvent={(event) => { setProfileViewReturn("profile"); navigateTo("event", { event }); }} />
+        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} myUsername={myUsername} setMyUsername={setMyUsername} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} onNavigateEvent={(event) => { setProfileViewReturn("profile"); navigateTo("event", { event }); }} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1620,7 +1620,7 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile, onNavigateEvent }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setMyUsername, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile, onNavigateEvent }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
