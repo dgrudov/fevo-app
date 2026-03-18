@@ -1,4 +1,4 @@
-package app.fevo;
+package app.gruvio;
 
 import com.getcapacitor.BridgeActivity;
 
