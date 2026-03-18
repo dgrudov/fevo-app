@@ -106,6 +106,8 @@ export default function Onboarding({ onFinish }) {
   const [usernameError, setUsernameError] = useState("");
   const [birthday, setBirthday] = useState("");
   const [gender, setGender] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const touchStartX = useRef(null);
   const slide = slides[step];
   const isLast = step === slides.length - 1;
@@ -126,7 +128,14 @@ export default function Onboarding({ onFinish }) {
   const isInterests = slide.id === "interests";
   const isProfile = slide.id === "profile";
 
-  const profileValid = name.trim().length >= 2 && username.length >= 3 && !usernameError && birthday && gender;
+  const handlePhoneChange = (val) => {
+    const clean = val.replace(/[^\d+\s\-()]/g, "");
+    setPhone(clean);
+    if (clean.length > 0 && clean.replace(/\D/g, "").length < 7) setPhoneError("Enter a valid phone number");
+    else setPhoneError("");
+  };
+
+  const profileValid = name.trim().length >= 2 && username.length >= 3 && !usernameError && birthday && gender && phone.replace(/\D/g, "").length >= 7 && !phoneError;
   const canProceed = isInterests ? selectedInterests.length > 0 : isProfile ? profileValid : true;
 
   const goTo = (next) => {
@@ -308,6 +317,19 @@ export default function Onboarding({ onFinish }) {
                 ))}
               </div>
             </div>
+            <div>
+              <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>PHONE NUMBER</label>
+              <input
+                className="onboard-input"
+                type="tel"
+                placeholder="+359 88 888 8888"
+                value={phone}
+                onChange={e => handlePhoneChange(e.target.value)}
+                maxLength={20}
+              />
+              {phoneError && <div style={{ fontSize: 12, color: "#f87171", marginTop: 5 }}>{phoneError}</div>}
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 5 }}>Used for account security only, never shown publicly</div>
+            </div>
             {!profileValid && (
               <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
                 Fill in all fields to continue
@@ -394,7 +416,7 @@ export default function Onboarding({ onFinish }) {
           <button
             onClick={() => {
               if (!canProceed) return;
-              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), username, birthday, gender });
+              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), username, birthday, gender, phone });
               else goTo(step + 1);
             }}
             style={{

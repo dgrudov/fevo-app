@@ -617,12 +617,13 @@ export default function App() {
   );
 
   if (showOnboarding) return (
-    <Onboarding onFinish={async ({ interests, name, username, birthday, gender }) => {
+    <Onboarding onFinish={async ({ interests, name, username, birthday, gender, phone }) => {
       const updates = { onboarded: true, interests };
       if (name) { updates.full_name = name; setMyName(name); }
       if (username) { updates.username = username; setMyUsername(username); }
       if (birthday) updates.birthday = birthday;
       if (gender) { updates.gender = gender; setMyGender(gender); }
+      if (phone) updates.phone = phone;
       await supabase.from("profiles").update(updates).eq("id", user.id);
       setMyInterests(interests);
       setShowOnboarding(false);
