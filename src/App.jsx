@@ -618,15 +618,25 @@ export default function App() {
 
   if (showOnboarding) return (
     <Onboarding onFinish={async ({ interests, name, username, birthday, gender, phone }) => {
+      if (phone) {
+        const { data: existingPhone } = await supabase.from("profiles").select("id").eq("phone", phone).neq("id", user.id).maybeSingle();
+        if (existingPhone) return { phoneError: "This phone number is already registered" };
+      }
+      if (username) {
+        const { data: existingUsername } = await supabase.from("profiles").select("id").eq("username", username).neq("id", user.id).maybeSingle();
+        if (existingUsername) return { usernameError: "This username is already taken" };
+      }
       const updates = { onboarded: true, interests };
       if (name) { updates.full_name = name; setMyName(name); }
       if (username) { updates.username = username; setMyUsername(username); }
       if (birthday) updates.birthday = birthday;
       if (gender) { updates.gender = gender; setMyGender(gender); }
       if (phone) updates.phone = phone;
-      await supabase.from("profiles").update(updates).eq("id", user.id);
+      const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
+      if (error) return { error: "Something went wrong, please try again" };
       setMyInterests(interests);
       setShowOnboarding(false);
+      return null;
     }} />
   );
 
@@ -1685,6 +1695,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
   const [showSettings, setShowSettings] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [notifPrefs, setNotifPrefs] = useState(() => {
     try { return JSON.parse(localStorage.getItem('gruvio_notif_prefs') || '{}'); } catch { return {}; }
   });
@@ -1711,8 +1722,13 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
   };
 
   const saveProfile = async () => {
+    setSaveError("");
+    if (editForm.username) {
+      const { data: existing } = await supabase.from("profiles").select("id").eq("username", editForm.username).neq("id", user.id).maybeSingle();
+      if (existing) { setSaveError("Username already taken"); return; }
+    }
     const { error } = await supabase.from("profiles").update({ full_name: editForm.full_name, username: editForm.username || null, bio: editForm.bio, location: editForm.location, instagram: editForm.instagram, interests: editForm.interests }).eq("id", user.id);
-    if (error) { console.error(error); return; }
+    if (error) { setSaveError("Failed to save, please try again"); return; }
     setProfile({ ...profile, ...editForm });
     if (editForm.full_name && editForm.full_name !== myName) setMyName(editForm.full_name);
     if (editForm.username) setMyUsername(editForm.username);
@@ -1905,9 +1921,10 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
                 })}
               </div>
             </div>
+            {saveError && <div style={{ fontSize: 13, color: "#f87171", textAlign: "center", marginBottom: 8 }}>{saveError}</div>}
             <div style={{ display: "flex", gap: 10 }}>
               <button className="btn" onClick={saveProfile} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, var(--accent), var(--accent2))", color: "#fff", border: "none" }}>Save</button>
-              <button className="btn" onClick={() => setEditing(false)} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "var(--bg3)", color: "var(--text2)", border: "1px solid var(--border2)" }}>Cancel</button>
+              <button className="btn" onClick={() => { setEditing(false); setSaveError(""); }} style={{ flex: 1, padding: 12, borderRadius: 12, fontSize: 14, fontWeight: 700, background: "var(--bg3)", color: "var(--text2)", border: "1px solid var(--border2)" }}>Cancel</button>
             </div>
           </div>
         ) : (

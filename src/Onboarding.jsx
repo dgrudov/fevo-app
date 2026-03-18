@@ -197,6 +197,8 @@ export default function Onboarding({ onFinish }) {
   const daysInMonth = new Date(birthYear, birthMonth, 0).getDate();
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const touchStartX = useRef(null);
   const slide = slides[step];
   const isLast = step === slides.length - 1;
@@ -520,10 +522,16 @@ export default function Onboarding({ onFinish }) {
             }}>←</button>
           )}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (!canProceed) return;
-              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), username, birthday, gender, phone: phone ? `${countryCode.code}${phone.trim()}` : "" });
-              else goTo(step + 1);
+              if (isLast) {
+                setSubmitting(true);
+                setSubmitError("");
+                const result = await onFinish({ interests: selectedInterests, name: name.trim(), username, birthday, gender, phone: phone ? `${countryCode.code}${phone.trim()}` : "" });
+                if (result?.phoneError) { setPhoneError(result.phoneError); setSubmitting(false); goTo(2); }
+                else if (result?.usernameError) { setUsernameError(result.usernameError); setSubmitting(false); goTo(2); }
+                else if (result?.error) { setSubmitError(result.error); setSubmitting(false); }
+              } else goTo(step + 1);
             }}
             style={{
               flex: 1, height: 56, borderRadius: 16,
@@ -537,8 +545,9 @@ export default function Onboarding({ onFinish }) {
               letterSpacing: 0.3, transition: "all 0.3s ease",
             }}
           >
-            {isLast ? "Find My Squad" : isInterests && selectedInterests.length > 0 ? `Continue with ${selectedInterests.length} interest${selectedInterests.length > 1 ? "s" : ""} →` : "Next →"}
+            {submitting ? "Setting up your profile…" : isLast ? "Find My Squad" : isInterests && selectedInterests.length > 0 ? `Continue with ${selectedInterests.length} interest${selectedInterests.length > 1 ? "s" : ""} →` : "Next →"}
           </button>
+          {submitError && <p style={{ textAlign: "center", fontSize: 13, color: "#f87171", marginTop: 10 }}>{submitError}</p>}
         </div>
       </div>
 
