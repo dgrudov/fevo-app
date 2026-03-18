@@ -140,6 +140,16 @@ export default function Onboarding({ onFinish }) {
   const [birthday, setBirthday] = useState("");
   const [gender, setGender] = useState("");
   const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0]);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [birthdayOpen, setBirthdayOpen] = useState(false);
+  const now = new Date();
+  const [birthDay, setBirthDay] = useState(1);
+  const [birthMonth, setBirthMonth] = useState(1);
+  const [birthYear, setBirthYear] = useState(now.getFullYear() - 20);
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const maxYear = now.getFullYear() - 13;
+  const minYear = now.getFullYear() - 100;
+  const daysInMonth = new Date(birthYear, birthMonth, 0).getDate();
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const touchStartX = useRef(null);
@@ -323,14 +333,14 @@ export default function Onboarding({ onFinish }) {
             </div>
             <div>
               <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>DATE OF BIRTH</label>
-              <input
+              <button
+                type="button"
+                onClick={() => setBirthdayOpen(true)}
                 className="onboard-input"
-                type="date"
-                value={birthday}
-                onChange={e => setBirthday(e.target.value)}
-                max={new Date(Date.now() - 13 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
-                style={{ colorScheme: "dark" }}
-              />
+                style={{ textAlign: "left", cursor: "pointer", color: birthday ? "#fff" : "rgba(255,255,255,0.3)" }}
+              >
+                {birthday ? `${birthDay} ${MONTHS[birthMonth - 1]} ${birthYear}` : "Select your birthday"}
+              </button>
             </div>
             <div>
               <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>GENDER</label>
@@ -354,20 +364,20 @@ export default function Onboarding({ onFinish }) {
             <div>
               <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>PHONE NUMBER</label>
               <div style={{ display: "flex", gap: 8 }}>
-                <select
-                  value={countryCode.code}
-                  onChange={e => setCountryCode(COUNTRY_CODES.find(c => c.code === e.target.value))}
+                <button
+                  type="button"
+                  onClick={() => setCountryOpen(true)}
                   style={{
-                    padding: "14px 10px", borderRadius: 14, flexShrink: 0,
+                    flexShrink: 0, padding: "14px 12px", borderRadius: 14,
                     background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)",
                     color: "#fff", fontSize: 14, fontFamily: "'DM Sans', sans-serif",
-                    outline: "none", cursor: "pointer", colorScheme: "dark",
+                    cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
                   }}
                 >
-                  {COUNTRY_CODES.map(c => (
-                    <option key={c.code + c.name} value={c.code}>{c.flag} {c.code}</option>
-                  ))}
-                </select>
+                  <span style={{ fontSize: 18 }}>{countryCode.flag}</span>
+                  <span style={{ fontWeight: 600 }}>{countryCode.code}</span>
+                  <span style={{ fontSize: 10, opacity: 0.5 }}>▼</span>
+                </button>
                 <input
                   className="onboard-input"
                   type="tel"
@@ -485,6 +495,62 @@ export default function Onboarding({ onFinish }) {
           </button>
         </div>
       </div>
+
+      {/* COUNTRY PICKER MODAL */}
+      {countryOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.6)" }} onClick={() => setCountryOpen(false)}>
+          <div style={{ background: "#1a0f0a", borderRadius: "22px 22px 0 0", maxHeight: "70vh", display: "flex", flexDirection: "column", border: "1px solid rgba(255,87,51,0.2)", maxWidth: 480, width: "100%", alignSelf: "center" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 700, fontSize: 16, color: "#fff" }}>Select Country</span>
+              <button onClick={() => setCountryOpen(false)} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Done</button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {COUNTRY_CODES.map(c => (
+                <div key={c.code + c.name} onClick={() => { setCountryCode(c); setCountryOpen(false); }}
+                  style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.05)", background: countryCode.name === c.name ? "rgba(255,87,51,0.12)" : "transparent" }}>
+                  <span style={{ fontSize: 22 }}>{c.flag}</span>
+                  <span style={{ flex: 1, fontSize: 15, color: "#fff", fontWeight: 500 }}>{c.name}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>{c.code}</span>
+                  {countryCode.name === c.name && <span style={{ color: "#ff5733", fontSize: 16 }}>✓</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BIRTHDAY PICKER MODAL */}
+      {birthdayOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.6)" }} onClick={() => setBirthdayOpen(false)}>
+          <div style={{ background: "#1a0f0a", borderRadius: "22px 22px 0 0", border: "1px solid rgba(255,87,51,0.2)", padding: "20px 24px 40px", maxWidth: 480, width: "100%", alignSelf: "center" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <span style={{ fontWeight: 700, fontSize: 16, color: "#fff" }}>Date of Birth</span>
+              <button onClick={() => {
+                setBirthday(`${birthYear}-${String(birthMonth).padStart(2,"0")}-${String(Math.min(birthDay, daysInMonth)).padStart(2,"0")}`);
+                setBirthdayOpen(false);
+              }} style={{ background: "linear-gradient(135deg,#ff5733,#ff8c42)", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: "8px 18px", cursor: "pointer" }}>Done</button>
+            </div>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              {[
+                { label: "DAY", value: Math.min(birthDay, daysInMonth), set: v => setBirthDay(v), min: 1, max: daysInMonth, fmt: v => v },
+                { label: "MONTH", value: birthMonth, set: v => setBirthMonth(v), min: 1, max: 12, fmt: v => MONTHS[v - 1] },
+                { label: "YEAR", value: birthYear, set: v => setBirthYear(v), min: minYear, max: maxYear, fmt: v => v },
+              ].map(col => (
+                <div key={col.label} style={{ flex: col.label === "YEAR" ? 1.4 : 1, textAlign: "center" }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "rgba(255,255,255,0.35)", marginBottom: 10 }}>{col.label}</div>
+                  <button onClick={() => col.set(v => v < col.max ? v + 1 : col.min)}
+                    style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 18, cursor: "pointer", marginBottom: 6 }}>▲</button>
+                  <div style={{ fontSize: col.label === "YEAR" ? 22 : 26, fontWeight: 800, color: "#ff5733", padding: "10px 0", background: "rgba(255,87,51,0.08)", borderRadius: 12, border: "1px solid rgba(255,87,51,0.2)", minHeight: 54, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {col.fmt(col.value)}
+                  </div>
+                  <button onClick={() => col.set(v => v > col.min ? v - 1 : col.max)}
+                    style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 18, cursor: "pointer", marginTop: 6 }}>▼</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
