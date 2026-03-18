@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const COUNTRY_CODES = [
   { code: "+359", flag: "🇧🇬", name: "Bulgaria" },
@@ -130,6 +130,51 @@ function FloatingParticles({ emojis, accent }) {
   );
 }
 
+const ITEM_H = 52;
+
+function ScrollPicker({ values, selected, onChange, fmt }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const idx = values.indexOf(selected);
+    if (ref.current && idx >= 0) {
+      ref.current.scrollTop = idx * ITEM_H;
+    }
+  }, []);
+
+  useEffect(() => {
+    const idx = values.indexOf(selected);
+    if (ref.current && idx >= 0 && Math.abs(ref.current.scrollTop - idx * ITEM_H) > ITEM_H) {
+      ref.current.scrollTop = idx * ITEM_H;
+    }
+  }, [values.length]);
+
+  const onScroll = () => {
+    if (!ref.current) return;
+    const idx = Math.round(ref.current.scrollTop / ITEM_H);
+    const clamped = Math.max(0, Math.min(idx, values.length - 1));
+    if (values[clamped] !== undefined && values[clamped] !== selected) onChange(values[clamped]);
+  };
+
+  return (
+    <div style={{ position: "relative", height: ITEM_H * 3, overflow: "hidden", flex: 1 }}>
+      <div style={{ position: "absolute", top: ITEM_H, left: 4, right: 4, height: ITEM_H, background: "rgba(255,87,51,0.12)", borderRadius: 12, border: "1px solid rgba(255,87,51,0.25)", pointerEvents: "none", zIndex: 1 }} />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: ITEM_H, background: "linear-gradient(to bottom, #1a0f0a, transparent)", pointerEvents: "none", zIndex: 2 }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: ITEM_H, background: "linear-gradient(to top, #1a0f0a, transparent)", pointerEvents: "none", zIndex: 2 }} />
+      <div ref={ref} className="scroll-picker" onScroll={onScroll}
+        style={{ height: "100%", overflowY: "scroll", scrollSnapType: "y mandatory", scrollbarWidth: "none" }}>
+        <div style={{ height: ITEM_H }} />
+        {values.map(v => (
+          <div key={v} style={{ height: ITEM_H, scrollSnapAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: v === selected ? 800 : 500, color: v === selected ? "#ff5733" : "rgba(255,255,255,0.35)", transition: "color 0.1s" }}>
+            {fmt ? fmt(v) : v}
+          </div>
+        ))}
+        <div style={{ height: ITEM_H }} />
+      </div>
+    </div>
+  );
+}
+
 export default function Onboarding({ onFinish }) {
   const [step, setStep] = useState(0);
   const [animating, setAnimating] = useState(false);
@@ -246,6 +291,7 @@ export default function Onboarding({ onFinish }) {
         .onboard-input::placeholder { color: rgba(255,255,255,0.3); }
         .gender-btn { transition: all 0.2s ease; }
         .gender-btn:active { transform: scale(0.96); }
+        .scroll-picker::-webkit-scrollbar { display: none; }
       `}</style>
 
       {slide.particles && <FloatingParticles emojis={slide.particles} accent={slide.accent} />}
@@ -530,23 +576,19 @@ export default function Onboarding({ onFinish }) {
                 setBirthdayOpen(false);
               }} style={{ background: "linear-gradient(135deg,#ff5733,#ff8c42)", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 700, padding: "8px 18px", cursor: "pointer" }}>Done</button>
             </div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-              {[
-                { label: "DAY", value: Math.min(birthDay, daysInMonth), set: v => setBirthDay(v), min: 1, max: daysInMonth, fmt: v => v },
-                { label: "MONTH", value: birthMonth, set: v => setBirthMonth(v), min: 1, max: 12, fmt: v => MONTHS[v - 1] },
-                { label: "YEAR", value: birthYear, set: v => setBirthYear(v), min: minYear, max: maxYear, fmt: v => v },
-              ].map(col => (
-                <div key={col.label} style={{ flex: col.label === "YEAR" ? 1.4 : 1, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "rgba(255,255,255,0.35)", marginBottom: 10 }}>{col.label}</div>
-                  <button onClick={() => col.set(v => v < col.max ? v + 1 : col.min)}
-                    style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 18, cursor: "pointer", marginBottom: 6 }}>▲</button>
-                  <div style={{ fontSize: col.label === "YEAR" ? 22 : 26, fontWeight: 800, color: "#ff5733", padding: "10px 0", background: "rgba(255,87,51,0.08)", borderRadius: 12, border: "1px solid rgba(255,87,51,0.2)", minHeight: 54, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {col.fmt(col.value)}
-                  </div>
-                  <button onClick={() => col.set(v => v > col.min ? v - 1 : col.max)}
-                    style={{ width: "100%", padding: "10px 0", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 18, cursor: "pointer", marginTop: 6 }}>▼</button>
-                </div>
-              ))}
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>DAY</div>
+                <ScrollPicker values={Array.from({ length: daysInMonth }, (_, i) => i + 1)} selected={Math.min(birthDay, daysInMonth)} onChange={setBirthDay} />
+              </div>
+              <div style={{ flex: 1.2, textAlign: "center" }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>MONTH</div>
+                <ScrollPicker values={Array.from({ length: 12 }, (_, i) => i + 1)} selected={birthMonth} onChange={setBirthMonth} fmt={v => MONTHS[v - 1]} />
+              </div>
+              <div style={{ flex: 1.4, textAlign: "center" }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>YEAR</div>
+                <ScrollPicker values={Array.from({ length: maxYear - minYear + 1 }, (_, i) => minYear + i)} selected={birthYear} onChange={setBirthYear} />
+              </div>
             </div>
           </div>
         </div>
