@@ -544,7 +544,7 @@ export default function Onboarding({ onFinish }) {
 
       {/* COUNTRY PICKER MODAL */}
       {countryOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.6)" }} onClick={() => setCountryOpen(false)}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.6)" }} onClick={() => setCountryOpen(false)} onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
           <div style={{ background: "#1a0f0a", borderRadius: "22px 22px 0 0", maxHeight: "70vh", display: "flex", flexDirection: "column", border: "1px solid rgba(255,87,51,0.2)", maxWidth: 480, width: "100%", alignSelf: "center" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontWeight: 700, fontSize: 16, color: "#fff" }}>Select Country</span>
@@ -567,7 +567,7 @@ export default function Onboarding({ onFinish }) {
 
       {/* BIRTHDAY PICKER MODAL */}
       {birthdayOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.6)" }} onClick={() => setBirthdayOpen(false)}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 999, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: "rgba(0,0,0,0.6)" }} onClick={() => setBirthdayOpen(false)} onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
           <div style={{ background: "#1a0f0a", borderRadius: "22px 22px 0 0", border: "1px solid rgba(255,87,51,0.2)", padding: "20px 24px 40px", maxWidth: 480, width: "100%", alignSelf: "center" }} onClick={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <span style={{ fontWeight: 700, fontSize: 16, color: "#fff" }}>Date of Birth</span>
