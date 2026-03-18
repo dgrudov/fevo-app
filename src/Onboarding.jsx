@@ -1,5 +1,38 @@
 import { useState, useRef } from "react";
 
+const COUNTRY_CODES = [
+  { code: "+359", flag: "🇧🇬", name: "Bulgaria" },
+  { code: "+1",   flag: "🇺🇸", name: "USA / Canada" },
+  { code: "+44",  flag: "🇬🇧", name: "UK" },
+  { code: "+49",  flag: "🇩🇪", name: "Germany" },
+  { code: "+33",  flag: "🇫🇷", name: "France" },
+  { code: "+34",  flag: "🇪🇸", name: "Spain" },
+  { code: "+39",  flag: "🇮🇹", name: "Italy" },
+  { code: "+31",  flag: "🇳🇱", name: "Netherlands" },
+  { code: "+32",  flag: "🇧🇪", name: "Belgium" },
+  { code: "+43",  flag: "🇦🇹", name: "Austria" },
+  { code: "+41",  flag: "🇨🇭", name: "Switzerland" },
+  { code: "+48",  flag: "🇵🇱", name: "Poland" },
+  { code: "+40",  flag: "🇷🇴", name: "Romania" },
+  { code: "+30",  flag: "🇬🇷", name: "Greece" },
+  { code: "+385", flag: "🇭🇷", name: "Croatia" },
+  { code: "+381", flag: "🇷🇸", name: "Serbia" },
+  { code: "+380", flag: "🇺🇦", name: "Ukraine" },
+  { code: "+7",   flag: "🇷🇺", name: "Russia" },
+  { code: "+90",  flag: "🇹🇷", name: "Turkey" },
+  { code: "+971", flag: "🇦🇪", name: "UAE" },
+  { code: "+966", flag: "🇸🇦", name: "Saudi Arabia" },
+  { code: "+91",  flag: "🇮🇳", name: "India" },
+  { code: "+86",  flag: "🇨🇳", name: "China" },
+  { code: "+81",  flag: "🇯🇵", name: "Japan" },
+  { code: "+82",  flag: "🇰🇷", name: "South Korea" },
+  { code: "+55",  flag: "🇧🇷", name: "Brazil" },
+  { code: "+52",  flag: "🇲🇽", name: "Mexico" },
+  { code: "+61",  flag: "🇦🇺", name: "Australia" },
+  { code: "+27",  flag: "🇿🇦", name: "South Africa" },
+  { code: "+20",  flag: "🇪🇬", name: "Egypt" },
+];
+
 const INTEREST_CATEGORIES = [
   { label: "Nightlife", emoji: "🪩", color: "#FF3CAC" },
   { label: "Sports", emoji: "🏃", color: "#10b981" },
@@ -106,6 +139,7 @@ export default function Onboarding({ onFinish }) {
   const [usernameError, setUsernameError] = useState("");
   const [birthday, setBirthday] = useState("");
   const [gender, setGender] = useState("");
+  const [countryCode, setCountryCode] = useState(COUNTRY_CODES[0]);
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const touchStartX = useRef(null);
@@ -319,14 +353,30 @@ export default function Onboarding({ onFinish }) {
             </div>
             <div>
               <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: 1, display: "block", marginBottom: 8 }}>PHONE NUMBER</label>
-              <input
-                className="onboard-input"
-                type="tel"
-                placeholder="+359 88 888 8888"
-                value={phone}
-                onChange={e => handlePhoneChange(e.target.value)}
-                maxLength={20}
-              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <select
+                  value={countryCode.code}
+                  onChange={e => setCountryCode(COUNTRY_CODES.find(c => c.code === e.target.value))}
+                  style={{
+                    padding: "14px 10px", borderRadius: 14, flexShrink: 0,
+                    background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.12)",
+                    color: "#fff", fontSize: 14, fontFamily: "'DM Sans', sans-serif",
+                    outline: "none", cursor: "pointer", colorScheme: "dark",
+                  }}
+                >
+                  {COUNTRY_CODES.map(c => (
+                    <option key={c.code + c.name} value={c.code}>{c.flag} {c.code}</option>
+                  ))}
+                </select>
+                <input
+                  className="onboard-input"
+                  type="tel"
+                  placeholder="88 888 8888"
+                  value={phone}
+                  onChange={e => handlePhoneChange(e.target.value)}
+                  maxLength={15}
+                />
+              </div>
               {phoneError && <div style={{ fontSize: 12, color: "#f87171", marginTop: 5 }}>{phoneError}</div>}
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 5 }}>Used for account security only, never shown publicly</div>
             </div>
@@ -416,7 +466,7 @@ export default function Onboarding({ onFinish }) {
           <button
             onClick={() => {
               if (!canProceed) return;
-              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), username, birthday, gender, phone });
+              if (isLast) onFinish({ interests: selectedInterests, name: name.trim(), username, birthday, gender, phone: phone ? `${countryCode.code}${phone.trim()}` : "" });
               else goTo(step + 1);
             }}
             style={{
