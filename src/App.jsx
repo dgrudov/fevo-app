@@ -1801,20 +1801,8 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
     if (nameChanged) {
       setMyName(editForm.full_name);
       const newName = editForm.full_name;
-      // Update host_name in events hosted by this user
-      supabase.from("events").update({ host_name: newName }).eq("host_id", user.id);
-      // Update member_names in events where this user is a member + update local state
-      supabase.from("events").select("id, members, member_names").contains("members", [user.id])
-        .then(({ data }) => {
-          if (!data) return;
-          data.forEach(event => {
-            const idx = (event.members || []).indexOf(user.id);
-            if (idx === -1) return;
-            const updatedNames = [...(event.member_names || [])];
-            updatedNames[idx] = newName;
-            supabase.from("events").update({ member_names: updatedNames }).eq("id", event.id);
-          });
-        });
+      // Update name everywhere via RPC (bypasses RLS)
+      supabase.rpc("update_user_name", { p_user_id: user.id, p_new_name: newName });
       // Update local events state immediately
       setEvents(prev => prev.map(e => {
         let updated = { ...e };
@@ -1841,8 +1829,6 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
           return updated;
         });
       }
-      // Update user_name in messages sent by this user
-      supabase.from("messages").update({ user_name: newName }).eq("user_id", user.id);
     }
     if (editForm.username) setMyUsername(editForm.username);
     setMyInterests(editForm.interests);
