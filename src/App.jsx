@@ -1764,7 +1764,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
       const newName = editForm.full_name;
       // Update host_name in events hosted by this user
       supabase.from("events").update({ host_name: newName }).eq("host_id", user.id);
-      // Update member_names in events where this user is a member
+      // Update member_names in events where this user is a member + update local state
       supabase.from("events").select("id, members, member_names").contains("members", [user.id])
         .then(({ data }) => {
           if (!data) return;
@@ -1776,6 +1776,32 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
             supabase.from("events").update({ member_names: updatedNames }).eq("id", event.id);
           });
         });
+      // Update local events state immediately
+      setEvents(prev => prev.map(e => {
+        let updated = { ...e };
+        if (e.hostId === user.id) updated.host = newName;
+        const idx = (e.members || []).indexOf(user.id);
+        if (idx !== -1) {
+          const updatedNames = [...(e.memberNames || [])];
+          updatedNames[idx] = newName;
+          updated.memberNames = updatedNames;
+        }
+        return updated;
+      }));
+      if (selectedEvent) {
+        setSelectedEvent(prev => {
+          if (!prev) return prev;
+          let updated = { ...prev };
+          if (prev.hostId === user.id) updated.host = newName;
+          const idx = (prev.members || []).indexOf(user.id);
+          if (idx !== -1) {
+            const updatedNames = [...(prev.memberNames || [])];
+            updatedNames[idx] = newName;
+            updated.memberNames = updatedNames;
+          }
+          return updated;
+        });
+      }
       // Update user_name in messages sent by this user
       supabase.from("messages").update({ user_name: newName }).eq("user_id", user.id);
     }
