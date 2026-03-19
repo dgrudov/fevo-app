@@ -27,7 +27,7 @@ export async function subscribeToPush(userId) {
       { user_id: userId, endpoint: sub.endpoint, subscription: sub.toJSON() },
       { onConflict: 'user_id,endpoint' }
     );
-  } catch (err) {
-    console.error('Push subscription failed:', err);
+  } catch {
+    // Push notifications unavailable or denied — fail silently
   }
 }

@@ -30,7 +30,7 @@ export default function Auth({ onLogin }) {
     if (signupError) { setError(signupError.message); setLoading(false); return; }
     if (data.user) {
       await supabase.from("profiles").insert({
-        id: data.user.id, full_name: name,
+        id: data.user.id, full_name: name, email: data.user.email,
         username: name.toLowerCase().replace(/\s+/g, ""),
       });
       onLogin(data.user, name, true);
@@ -49,6 +49,10 @@ export default function Auth({ onLogin }) {
         onLogin(data.user, profile?.full_name || "", false, true);
         setLoading(false);
         return;
+      }
+      // Backfill email for users who signed up before email was stored in profiles
+      if (!profile?.email && data.user.email) {
+        supabase.from("profiles").update({ email: data.user.email }).eq("id", data.user.id);
       }
       onLogin(data.user, profile?.full_name || "");
     }

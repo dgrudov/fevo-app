@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { App as CapApp } from "@capacitor/app";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
 import DatePicker from "react-datepicker";
@@ -74,7 +75,6 @@ export default function App() {
   const [myName, setMyName] = useState("");
   const [myUsername, setMyUsername] = useState("");
   const [myGender, setMyGender] = useState("");
-  const [myGroupSize, setMyGroupSize] = useState(1);
   const [joined, setJoined] = useState(null);
   const [createStep, setCreateStep] = useState(1);
   const [createForm, setCreateForm] = useState({ title: "", type: "", time: "", timeDate: null, location: "", vibe: "", maxSize: 8, category: "", joinType: "request", durationHours: 2 });
@@ -97,6 +97,8 @@ export default function App() {
   const pendingEventRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [avatarCache, setAvatarCache] = useState({});
+  const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
   const [chatReturnScreen, setChatReturnScreen] = useState("event");
@@ -197,7 +199,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const handler = () => {
+    let listener;
+    CapApp.addListener("backButton", () => {
       const current = screen;
       if (current === "event") { setScreen("explore"); setSelectedEvent(null); }
       else if (current === "create") { setScreen("explore"); setCreateStep(1); }
@@ -206,10 +209,9 @@ export default function App() {
       else if (current === "chat") { setScreen("event"); }
       else if (current === "requests") { setScreen("explore"); }
       else if (current === "notifications") { setScreen("explore"); }
-      else { window.history.pushState(null, "", window.location.href); }
-    };
-    window.addEventListener("popstate", handler);
-    return () => window.removeEventListener("popstate", handler);
+      // on explore: do nothing (don't exit)
+    }).then(l => { listener = l; });
+    return () => { if (listener) listener.remove(); };
   }, [screen, profileViewReturn]);
 
   useEffect(() => {
@@ -219,7 +221,7 @@ export default function App() {
       if (session) {
         setUser(session.user);
         subscribeToPush(session.user.id);
-        supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender").eq("id", session.user.id).maybeSingle()
+        supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender, email").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
             if (!data) return;
             if (data.banned === true) { setIsBanned(true); return; }
@@ -227,7 +229,10 @@ export default function App() {
             setMyUsername(data.username || "");
             setMyInterests(data.interests || []);
             setMyGender(data.gender || "");
-
+            // Backfill email for users who signed up before email was stored
+            if (!data.email && session.user.email) {
+              supabase.from("profiles").update({ email: session.user.email }).eq("id", session.user.id);
+            }
             if (!data.onboarded) setShowOnboarding(true);
             if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
           });
@@ -258,9 +263,10 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const loadEvents = async () => {
+      setEventsLoading(true);
       notificationSentRef.current = false;
       const { data, error } = await supabase.from("events").select("*").order("created_at", { ascending: false });
-      if (error) { console.error(error); return; }
+      if (error) { setEventsLoading(false); return; }
       const formatted = data.map(e => ({
         ...e, groupSize: e.group_size, maxSize: e.max_size, host: e.host_name, hostId: e.host_id,
         hostAvatar: e.host_name ? e.host_name[0].toUpperCase() : "?",
@@ -278,14 +284,18 @@ export default function App() {
         return parsed > new Date();
       });
       setEvents(activeEvents);
+      setEventsLoading(false);
       if (pendingEventRef.current) {
         const target = formatted.find(e => String(e.id) === String(pendingEventRef.current));
         if (target) { navigateTo("event", { event: target }); }
         pendingEventRef.current = null;
       }
-      const hostIds = [...new Set((data || []).map(e => e.host_id).filter(Boolean))];
-      if (hostIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, avatar_url").in("id", hostIds);
+      const allIds = [...new Set([
+        ...(data || []).map(e => e.host_id),
+        ...(data || []).flatMap(e => e.members || []),
+      ].filter(Boolean))];
+      if (allIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, avatar_url").in("id", allIds);
         if (profiles) {
           const cache = {};
           profiles.forEach(p => { if (p.avatar_url) cache[p.id] = p.avatar_url; });
@@ -294,7 +304,7 @@ export default function App() {
       }
     };
     loadEvents();
-  }, [user]);
+  }, [user, eventsRefreshKey]);
 
   useEffect(() => {
     if (!user) return;
@@ -479,7 +489,8 @@ export default function App() {
   const handleLeave = async (event) => {
     if (!user) return;
     const updatedMembers = (event.members || []).filter(m => m !== user.id);
-    const updatedNames = (event.memberNames || []).filter(m => m !== myName);
+    const userIdx = (event.members || []).indexOf(user.id);
+    const updatedNames = (event.memberNames || []).filter((_, i) => i !== userIdx);
     const updatedSize = Math.max(0, (event.groupSize || 1) - 1);
     const { error } = await supabase.from("events").update({ members: updatedMembers, member_names: updatedNames, group_size: updatedSize }).eq("id", event.id);
     if (error) { console.error("leave error:", error); setToast("Could not leave event"); setTimeout(() => setToast(null), 3000); return; }
@@ -668,6 +679,7 @@ export default function App() {
         select option { background: var(--bg3); color: var(--text); }
         .fade-in { animation: fadeIn 0.35s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .chip { display: inline-flex; align-items: center; gap: 5px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 100px; padding: 5px 12px; font-size: 13px; color: var(--text2); font-weight: 500; }
         .avatar-ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
         .tab-btn { cursor: pointer; padding: 7px 14px; border-radius: 100px; font-size: 13px; font-weight: 600; transition: all 0.18s; border: none; }
@@ -770,7 +782,23 @@ export default function App() {
           </div>
 
           <div style={{ padding: "8px 16px 0" }}>
-            {filteredEvents.length === 0 && (
+            {eventsLoading && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="card" style={{ borderRadius: 20, padding: 18, overflow: "hidden", position: "relative" }}>
+                    <div style={{ background: "linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite", borderRadius: 10, height: 18, width: "60%", marginBottom: 10 }} />
+                    <div style={{ background: "linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite", borderRadius: 8, height: 13, width: "40%", marginBottom: 16 }} />
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      {[80, 60, 70].map((w, j) => (
+                        <div key={j} style={{ background: "linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite", borderRadius: 100, height: 24, width: w }} />
+                      ))}
+                    </div>
+                    <div style={{ background: "linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite", borderRadius: 6, height: 6, width: "100%" }} />
+                  </div>
+                ))}
+              </div>
+            )}
+            {!eventsLoading && filteredEvents.length === 0 && (
               <div style={{ textAlign: "center", padding: "60px 20px" }}>
                 <p className="display" style={{ fontSize: 20, fontWeight: 700, color: "var(--text2)", marginBottom: 8 }}>No events found</p>
                 <p style={{ fontSize: 14, color: "var(--text3)", lineHeight: 1.5 }}>
@@ -789,7 +817,7 @@ export default function App() {
                 </button>
               </div>
             )}
-            {filteredEvents.map((event, i) => (
+            {!eventsLoading && filteredEvents.map((event, i) => (
               <div key={event.id} className={`card shadow stagger-${Math.min(i + 1, 4)}`} onClick={() => navigateTo("event", { event })} style={{ padding: 18, marginBottom: 12, cursor: "pointer" }}>
                 <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: event.color, filter: "blur(30px)", opacity: 0.15, pointerEvents: "none" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -820,9 +848,13 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ display: "flex" }}>
-                      {(event.memberNames || event.members || []).slice(0, 5).map((m, j) => (
-                        <div key={j} className="avatar-ring" style={{ width: 24, height: 24, marginLeft: j > 0 ? -8 : 0, fontSize: 9, background: event.color + "55", border: "2px solid var(--card)", color: "#fff", zIndex: 5 - j, fontWeight: 700 }}>{m[0].toUpperCase()}</div>
-                      ))}
+                      {(event.members || []).slice(0, 5).map((memberId, j) => {
+                        const avatarUrl = avatarCache[memberId];
+                        const name = event.memberNames?.[j] || "";
+                        return avatarUrl
+                          ? <img key={j} src={avatarUrl} alt={name} className="avatar-ring" style={{ width: 24, height: 24, marginLeft: j > 0 ? -8 : 0, objectFit: "cover", border: "2px solid var(--card)", zIndex: 5 - j }} />
+                          : <div key={j} className="avatar-ring" style={{ width: 24, height: 24, marginLeft: j > 0 ? -8 : 0, fontSize: 9, background: event.color + "55", border: "2px solid var(--card)", color: "#fff", zIndex: 5 - j, fontWeight: 700 }}>{name ? name[0].toUpperCase() : "?"}</div>;
+                      })}
                       {event.members.length > 5 && <div className="avatar-ring" style={{ width: 24, height: 24, marginLeft: -8, fontSize: 9, background: "var(--bg4)", border: "2px solid var(--card)", color: "var(--text3)", fontWeight: 700, zIndex: 0 }}>+{event.members.length - 5}</div>}
                     </div>
                     <span style={{ fontSize: 12, color: "var(--text3)" }}>{event.groupSize} joined</span>
@@ -1187,10 +1219,6 @@ export default function App() {
                     <span>📍 {createForm.location || "TBD"}</span>
 
                   </div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>YOUR GROUP SIZE</label>
-                  <select value={myGroupSize} onChange={e => setMyGroupSize(e.target.value)}>{[1, 2, 3, 4, 5, 6, 7, 8].map(n => <option key={n} value={n}>{n} person{n > 1 ? "s" : ""}</option>)}</select>
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: "var(--text3)", display: "block", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>MAX GROUP SIZE</label>
@@ -1662,7 +1690,7 @@ export default function App() {
       {(screen === "explore" || screen === "create" || screen === "profile") && (
         <div className="bottom-nav">
           {[{ id: "explore", emoji: "🔍", label: "Explore" }, { id: "create", emoji: "＋", label: "Create", big: true }, { id: "profile", emoji: "👤", label: "Profile" }].map(nav => (
-            <button key={nav.id} className="btn" onClick={() => navigateTo(nav.id, { step: 1 })} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: nav.big ? "linear-gradient(135deg, var(--accent), var(--accent2))" : "none", border: "none", borderRadius: nav.big ? "50%" : 0, width: nav.big ? 52 : "auto", height: nav.big ? 52 : "auto", justifyContent: "center", marginTop: nav.big ? -16 : 0, boxShadow: nav.big ? "0 4px 20px rgba(255,87,51,0.45)" : "none" }}>
+            <button key={nav.id} className="btn" onClick={() => { if (nav.id === "explore" && screen === "explore") { setEventsRefreshKey(k => k + 1); window.scrollTo({ top: 0, behavior: "smooth" }); } else { navigateTo(nav.id, { step: 1 }); } }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: nav.big ? "linear-gradient(135deg, var(--accent), var(--accent2))" : "none", border: "none", borderRadius: nav.big ? "50%" : 0, width: nav.big ? 52 : "auto", height: nav.big ? 52 : "auto", justifyContent: "center", marginTop: nav.big ? -16 : 0, boxShadow: nav.big ? "0 4px 20px rgba(255,87,51,0.45)" : "none" }}>
               <span style={{ fontSize: nav.big ? 22 : 20, color: nav.big ? "#fff" : (screen === nav.id ? "var(--accent)" : "var(--text3)") }}>{nav.emoji}</span>
               {!nav.big && <span style={{ fontSize: 11, fontWeight: 600, color: screen === nav.id ? "var(--accent)" : "var(--text3)" }}>{nav.label}</span>}
             </button>
@@ -1730,7 +1758,27 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
     const { error } = await supabase.from("profiles").update({ full_name: editForm.full_name, username: editForm.username || null, bio: editForm.bio, location: editForm.location, instagram: editForm.instagram, interests: editForm.interests }).eq("id", user.id);
     if (error) { setSaveError("Failed to save, please try again"); return; }
     setProfile({ ...profile, ...editForm });
-    if (editForm.full_name && editForm.full_name !== myName) setMyName(editForm.full_name);
+    const nameChanged = editForm.full_name && editForm.full_name !== myName;
+    if (nameChanged) {
+      setMyName(editForm.full_name);
+      const newName = editForm.full_name;
+      // Update host_name in events hosted by this user
+      supabase.from("events").update({ host_name: newName }).eq("host_id", user.id);
+      // Update member_names in events where this user is a member
+      supabase.from("events").select("id, members, member_names").contains("members", [user.id])
+        .then(({ data }) => {
+          if (!data) return;
+          data.forEach(event => {
+            const idx = (event.members || []).indexOf(user.id);
+            if (idx === -1) return;
+            const updatedNames = [...(event.member_names || [])];
+            updatedNames[idx] = newName;
+            supabase.from("events").update({ member_names: updatedNames }).eq("id", event.id);
+          });
+        });
+      // Update user_name in messages sent by this user
+      supabase.from("messages").update({ user_name: newName }).eq("user_id", user.id);
+    }
     if (editForm.username) setMyUsername(editForm.username);
     setMyInterests(editForm.interests);
     setEditing(false);

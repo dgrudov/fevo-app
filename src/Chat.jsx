@@ -5,7 +5,23 @@ export default function Chat({ event, user, myName, onBack }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [vpTop, setVpTop] = useState(0);
+  const [vpHeight, setVpHeight] = useState(window.innerHeight);
   const bottomRef = useRef(null);
+  const messagesRef = useRef(null);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setVpTop(vv.offsetTop);
+      setVpHeight(vv.height);
+      setTimeout(() => messagesRef.current?.scrollTo({ top: messagesRef.current.scrollHeight }), 50);
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
+  }, []);
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -37,13 +53,6 @@ export default function Chat({ event, user, myName, onBack }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => {
-    const textarea = document.querySelector(".chat-input");
-    if (!textarea) return;
-    const handleFocus = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
-    textarea.addEventListener("focus", handleFocus);
-    return () => textarea.removeEventListener("focus", handleFocus);
-  }, []);
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -56,7 +65,6 @@ export default function Chat({ event, user, myName, onBack }) {
 
     const otherMembers = (event.members || []).filter(id => id !== user.id);
     for (const memberId of otherMembers) {
-      // Push BEFORE RPC — so server check sees the previous unread notification, not this one
       if (location.hostname !== "localhost") {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session?.access_token) return;
@@ -88,15 +96,17 @@ export default function Chat({ event, user, myName, onBack }) {
   return (
     <div style={{
       maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column",
-      background: "#0a0805", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
+      background: "#0a0805", position: "fixed", top: vpTop, left: 0, right: 0, height: vpHeight, zIndex: 100,
     }}>
       {/* Header */}
       <div style={{
-        padding: "20px 16px 14px", background: "#161009",
+        padding: "16px 16px 14px",
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)",
+        background: "#161009",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
         display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
       }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, padding: 4, color: "rgba(255,255,255,0.6)" }}>←</button>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, padding: "8px 8px 8px 4px", color: "rgba(255,255,255,0.6)", lineHeight: 1 }}>←</button>
         <div style={{ width: 40, height: 40, borderRadius: 12, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", background: `${event.color}18`, border: `1px solid ${event.color}25` }}>{event.emoji}</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 15, fontFamily: "'DM Sans', sans-serif", color: "#fff" }}>{event.title}</div>
@@ -105,7 +115,7 @@ export default function Chat({ event, user, myName, onBack }) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div ref={messagesRef} style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 12, WebkitOverflowScrolling: "touch" }}>
         {loading && <div style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", marginTop: 40 }}>Loading messages...</div>}
         {!loading && messages.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px 0", color: "rgba(255,255,255,0.3)" }}>
@@ -153,9 +163,11 @@ export default function Chat({ event, user, myName, onBack }) {
 
       {/* Input */}
       <div style={{
-        padding: "12px 16px 28px", background: "#161009",
+        padding: "12px 16px",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+        background: "#161009",
         borderTop: "1px solid rgba(255,255,255,0.06)",
-        display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0,
+        display: "flex", gap: 10, alignItems: "center", flexShrink: 0,
       }}>
         <textarea
           className="chat-input"
@@ -166,19 +178,20 @@ export default function Chat({ event, user, myName, onBack }) {
           rows={1}
           style={{
             flex: 1, background: "#1a1510", border: "1.5px solid rgba(255,120,60,0.15)",
-            borderRadius: 20, padding: "10px 16px", fontSize: 15,
+            borderRadius: 24, padding: "12px 18px", fontSize: 16,
             fontFamily: "'DM Sans', sans-serif", outline: "none",
             resize: "none", color: "#fff", lineHeight: 1.4, transition: "border 0.2s",
+            minHeight: 48,
           }}
           onFocus={e => e.target.style.borderColor = "#ff5733"}
           onBlur={e => e.target.style.borderColor = "rgba(255,120,60,0.15)"}
         />
         <button onClick={sendMessage} disabled={!newMessage.trim()} style={{
-          width: 44, height: 44, borderRadius: "50%", border: "none",
+          width: 48, height: 48, borderRadius: "50%", border: "none",
           cursor: newMessage.trim() ? "pointer" : "not-allowed",
           background: newMessage.trim() ? "linear-gradient(135deg, #ff5733, #ff8c42)" : "#221c14",
           color: newMessage.trim() ? "#fff" : "rgba(255,255,255,0.2)",
-          fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
           boxShadow: newMessage.trim() ? "0 4px 16px rgba(255,87,51,0.4)" : "none",
           transition: "all 0.2s",
         }}>↑</button>
