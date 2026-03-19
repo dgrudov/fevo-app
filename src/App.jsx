@@ -198,21 +198,35 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
+  const screenRef = useRef(screen);
+  const profileViewReturnRef = useRef(profileViewReturn);
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+  useEffect(() => { profileViewReturnRef.current = profileViewReturn; }, [profileViewReturn]);
+
+  const handleBack = () => {
+    const current = screenRef.current;
+    if (current === "event") { setScreen("explore"); setSelectedEvent(null); }
+    else if (current === "create") { setScreen("explore"); setCreateStep(1); }
+    else if (current === "profile") { setScreen("explore"); }
+    else if (current === "profileView") { setScreen(profileViewReturnRef.current); }
+    else if (current === "chat") { setScreen("event"); }
+    else if (current === "requests") { setScreen("explore"); }
+    else if (current === "notifications") { setScreen("explore"); }
+    else { window.history.pushState(null, "", window.location.href); }
+  };
+
+  // Native Android back button
   useEffect(() => {
     let listener;
-    CapApp.addListener("backButton", () => {
-      const current = screen;
-      if (current === "event") { setScreen("explore"); setSelectedEvent(null); }
-      else if (current === "create") { setScreen("explore"); setCreateStep(1); }
-      else if (current === "profile") { setScreen("explore"); }
-      else if (current === "profileView") { setScreen(profileViewReturn); }
-      else if (current === "chat") { setScreen("event"); }
-      else if (current === "requests") { setScreen("explore"); }
-      else if (current === "notifications") { setScreen("explore"); }
-      // on explore: do nothing (don't exit)
-    }).then(l => { listener = l; });
-    return () => { if (listener) listener.remove(); };
-  }, [screen, profileViewReturn]);
+    CapApp.addListener("backButton", handleBack).then(l => { listener = l; });
+    return () => { listener?.remove(); };
+  }, []);
+
+  // Web browser back button (localhost / gruvio.app)
+  useEffect(() => {
+    window.addEventListener("popstate", handleBack);
+    return () => window.removeEventListener("popstate", handleBack);
+  }, []);
 
   useEffect(() => {
     // Only check banned/onboarded on existing session load (returning users)
@@ -304,6 +318,31 @@ export default function App() {
       }
     };
     loadEvents();
+
+    // Real-time: refresh events when member_names or host_name change
+    const eventsSub = supabase
+      .channel("events-updates")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, (payload) => {
+        setEvents(prev => prev.map(e => e.id === payload.new.id ? {
+          ...e,
+          host: payload.new.host_name,
+          memberNames: payload.new.member_names || [],
+          members: payload.new.members || [],
+          groupSize: payload.new.group_size,
+          maxSize: payload.new.max_size,
+        } : e));
+        setSelectedEvent(prev => prev?.id === payload.new.id ? {
+          ...prev,
+          host: payload.new.host_name,
+          memberNames: payload.new.member_names || [],
+          members: payload.new.members || [],
+          groupSize: payload.new.group_size,
+          maxSize: payload.new.max_size,
+        } : prev);
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(eventsSub);
   }, [user, eventsRefreshKey]);
 
   useEffect(() => {
@@ -1407,7 +1446,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} myUsername={myUsername} setMyUsername={setMyUsername} setMyInterests={setMyInterests} joined={joined} events={events} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} onNavigateEvent={(event) => { setProfileViewReturn("profile"); navigateTo("event", { event }); }} />
+        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} myUsername={myUsername} setMyUsername={setMyUsername} setMyInterests={setMyInterests} joined={joined} events={events} setEvents={setEvents} selectedEvent={selectedEvent} setSelectedEvent={setSelectedEvent} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} onNavigateEvent={(event) => { setProfileViewReturn("profile"); navigateTo("event", { event }); }} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1701,7 +1740,7 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setMyUsername, setMyInterests, joined, events, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile, onNavigateEvent }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setMyUsername, setMyInterests, joined, events, setEvents, selectedEvent, setSelectedEvent, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile, onNavigateEvent }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
