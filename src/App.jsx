@@ -1801,7 +1801,10 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
     if (nameChanged) {
       setMyName(editForm.full_name);
       const newName = editForm.full_name;
-      // Update name everywhere via RPC (bypasses RLS)
+      // Direct updates (work for own events via RLS)
+      supabase.from("events").update({ host_name: newName }).eq("host_id", user.id);
+      supabase.from("messages").update({ user_name: newName }).eq("user_id", user.id);
+      // RPC update for member_names in events user didn't host (needs update_user_name function in Supabase)
       supabase.rpc("update_user_name", { p_user_id: user.id, p_new_name: newName });
       // Update local events state immediately
       setEvents(prev => prev.map(e => {
