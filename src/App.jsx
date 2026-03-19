@@ -309,32 +309,38 @@ export default function App() {
         ...(data || []).flatMap(e => e.members || []),
       ].filter(Boolean))];
       if (allIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, avatar_url").in("id", allIds);
+        const { data: profiles } = await supabase.from("profiles").select("id, avatar_url, full_name").in("id", allIds);
         if (profiles) {
-          const cache = {};
-          profiles.forEach(p => { if (p.avatar_url) cache[p.id] = p.avatar_url; });
-          setAvatarCache(prev => ({ ...prev, ...cache }));
+          const avatars = {};
+          const names = {};
+          profiles.forEach(p => {
+            if (p.avatar_url) avatars[p.id] = p.avatar_url;
+            if (p.full_name) names[p.id] = p.full_name;
+          });
+          setAvatarCache(prev => ({ ...prev, ...avatars }));
+          // Enrich memberNames and host from live profile names
+          setEvents(prev => prev.map(e => ({
+            ...e,
+            host: names[e.hostId] || e.host,
+            memberNames: (e.members || []).map((id, i) => names[id] || e.memberNames?.[i] || ""),
+          })));
         }
       }
     };
     loadEvents();
 
-    // Real-time: refresh events when member_names or host_name change
+    // Real-time: update events when members join/leave
     const eventsSub = supabase
       .channel("events-updates")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, (payload) => {
         setEvents(prev => prev.map(e => e.id === payload.new.id ? {
           ...e,
-          host: payload.new.host_name,
-          memberNames: payload.new.member_names || [],
           members: payload.new.members || [],
           groupSize: payload.new.group_size,
           maxSize: payload.new.max_size,
         } : e));
         setSelectedEvent(prev => prev?.id === payload.new.id ? {
           ...prev,
-          host: payload.new.host_name,
-          memberNames: payload.new.member_names || [],
           members: payload.new.members || [],
           groupSize: payload.new.group_size,
           maxSize: payload.new.max_size,
@@ -342,7 +348,30 @@ export default function App() {
       })
       .subscribe();
 
-    return () => supabase.removeChannel(eventsSub);
+    // Real-time: update names when any user changes their profile name
+    const profilesSub = supabase
+      .channel("profiles-name-updates")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+        const changedId = payload.new.id;
+        const newName = payload.new.full_name;
+        if (!newName) return;
+        const applyNameUpdate = (e) => {
+          let updated = { ...e };
+          if (e.hostId === changedId) updated.host = newName;
+          const idx = (e.members || []).indexOf(changedId);
+          if (idx !== -1) {
+            const updatedNames = [...(e.memberNames || [])];
+            updatedNames[idx] = newName;
+            updated.memberNames = updatedNames;
+          }
+          return updated;
+        };
+        setEvents(prev => prev.map(applyNameUpdate));
+        setSelectedEvent(prev => prev ? applyNameUpdate(prev) : prev);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(eventsSub); supabase.removeChannel(profilesSub); };
   }, [user, eventsRefreshKey]);
 
   useEffect(() => {
@@ -1797,41 +1826,8 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
     const { error } = await supabase.from("profiles").update({ full_name: editForm.full_name, username: editForm.username || null, bio: editForm.bio, location: editForm.location, instagram: editForm.instagram, interests: editForm.interests }).eq("id", user.id);
     if (error) { setSaveError("Failed to save, please try again"); return; }
     setProfile({ ...profile, ...editForm });
-    const nameChanged = editForm.full_name && editForm.full_name !== myName;
-    if (nameChanged) {
+    if (editForm.full_name && editForm.full_name !== myName) {
       setMyName(editForm.full_name);
-      const newName = editForm.full_name;
-      // Direct updates (work for own events via RLS)
-      supabase.from("events").update({ host_name: newName }).eq("host_id", user.id);
-      supabase.from("messages").update({ user_name: newName }).eq("user_id", user.id);
-      // RPC update for member_names in events user didn't host (needs update_user_name function in Supabase)
-      supabase.rpc("update_user_name", { p_user_id: user.id, p_new_name: newName });
-      // Update local events state immediately
-      setEvents(prev => prev.map(e => {
-        let updated = { ...e };
-        if (e.hostId === user.id) updated.host = newName;
-        const idx = (e.members || []).indexOf(user.id);
-        if (idx !== -1) {
-          const updatedNames = [...(e.memberNames || [])];
-          updatedNames[idx] = newName;
-          updated.memberNames = updatedNames;
-        }
-        return updated;
-      }));
-      if (selectedEvent) {
-        setSelectedEvent(prev => {
-          if (!prev) return prev;
-          let updated = { ...prev };
-          if (prev.hostId === user.id) updated.host = newName;
-          const idx = (prev.members || []).indexOf(user.id);
-          if (idx !== -1) {
-            const updatedNames = [...(prev.memberNames || [])];
-            updatedNames[idx] = newName;
-            updated.memberNames = updatedNames;
-          }
-          return updated;
-        });
-      }
     }
     if (editForm.username) setMyUsername(editForm.username);
     setMyInterests(editForm.interests);
