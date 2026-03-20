@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 
 export default function Chat({ event, user, myName, onBack }) {
   const [messages, setMessages] = useState([]);
+  const [nameMap, setNameMap] = useState({});
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [vpTop, setVpTop] = useState(0);
@@ -31,6 +32,16 @@ export default function Chat({ event, user, myName, onBack }) {
       if (error) { console.error(error); return; }
       setMessages(data || []);
       setLoading(false);
+      // Fetch current names from profiles for all message senders
+      const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+        if (profiles) {
+          const map = {};
+          profiles.forEach(p => { if (p.full_name) map[p.id] = p.full_name; });
+          setNameMap(map);
+        }
+      }
     };
     loadMessages();
 
@@ -44,9 +55,24 @@ export default function Chat({ event, user, myName, onBack }) {
           if (prev.some(m => m.id === payload.new.id)) return prev;
           return [...prev, payload.new];
         });
-      }).subscribe();
+        // Fetch name for new sender if not cached
+        setNameMap(prev => {
+          if (prev[payload.new.user_id]) return prev;
+          supabase.from("profiles").select("id, full_name").eq("id", payload.new.user_id).single()
+            .then(({ data }) => { if (data?.full_name) setNameMap(p => ({ ...p, [data.id]: data.full_name })); });
+          return prev;
+        });
+      })
+      .subscribe();
 
-    return () => supabase.removeChannel(subscription);
+    const profilesSub = supabase
+      .channel(`chat-profiles-${event.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+        if (payload.new.full_name) setNameMap(prev => ({ ...prev, [payload.new.id]: payload.new.full_name }));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(subscription); supabase.removeChannel(profilesSub); };
   }, [event.id]);
 
   useEffect(() => {
@@ -131,12 +157,12 @@ export default function Chat({ event, user, myName, onBack }) {
           return (
             <div key={msg.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
               {showName && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 4, marginLeft: 36 }}>{msg.user_name}</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 4, marginLeft: 36 }}>{nameMap[msg.user_id] || msg.user_name}</div>
               )}
               <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isMe ? "row-reverse" : "row", width: "100%" }}>
                 {!isMe && (
                   <div style={{ width: 28, height: isLastInGroup ? 28 : 0, borderRadius: "50%", background: isLastInGroup ? event.color + "55" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                    {isLastInGroup ? msg.user_name?.[0]?.toUpperCase() : ""}
+                    {isLastInGroup ? (nameMap[msg.user_id] || msg.user_name)?.[0]?.toUpperCase() : ""}
                   </div>
                 )}
                 <div style={{
