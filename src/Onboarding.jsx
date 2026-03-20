@@ -199,7 +199,6 @@ export default function Onboarding({ onFinish }) {
   const [phoneError, setPhoneError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const touchStartX = useRef(null);
   const slide = slides[step];
   const isLast = step === slides.length - 1;
 
@@ -241,21 +240,10 @@ export default function Onboarding({ onFinish }) {
     );
   };
 
-  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (diff > 50 && canProceed) goTo(step + 1);
-    if (diff < -50) goTo(step - 1);
-    touchStartX.current = null;
-  };
-
   const bgGradient = `radial-gradient(ellipse at 50% 30%, ${slide.bg[1]} 0%, ${slide.bg[2]} 50%, ${slide.bg[0]} 100%)`;
 
   return (
     <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
       style={{
         minHeight: "100vh", maxWidth: 480, margin: "0 auto",
         display: "flex", flexDirection: "column",

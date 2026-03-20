@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 
-export default function Chat({ event, user, myName, onBack, onViewProfile, nameCache = {}, onUpdateNameCache }) {
+export default function Chat({ event, user, myName, onBack, onViewProfile, nameCache = {}, onUpdateNameCache, avatarCache = {}, onUpdateAvatarCache }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -34,11 +34,15 @@ export default function Chat({ event, user, myName, onBack, onViewProfile, nameC
       // Fetch current names from profiles for all message senders
       const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
       if (userIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+        const { data: profiles } = await supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds);
         if (profiles) {
-          const updates = {};
-          profiles.forEach(p => { if (p.full_name) updates[p.id] = p.full_name; });
-          onUpdateNameCache?.(updates);
+          const nameUpdates = {}, avatarUpdates = {};
+          profiles.forEach(p => {
+            if (p.full_name) nameUpdates[p.id] = p.full_name;
+            if (p.avatar_url) avatarUpdates[p.id] = p.avatar_url;
+          });
+          onUpdateNameCache?.(nameUpdates);
+          onUpdateAvatarCache?.(avatarUpdates);
         }
       }
     };
@@ -54,10 +58,13 @@ export default function Chat({ event, user, myName, onBack, onViewProfile, nameC
           if (prev.some(m => m.id === payload.new.id)) return prev;
           return [...prev, payload.new];
         });
-        // Fetch name for new sender if not cached
+        // Fetch name/avatar for new sender if not cached
         if (!nameCache[payload.new.user_id]) {
-          supabase.from("profiles").select("id, full_name").eq("id", payload.new.user_id).single()
-            .then(({ data }) => { if (data?.full_name) onUpdateNameCache?.({ [data.id]: data.full_name }); });
+          supabase.from("profiles").select("id, full_name, avatar_url").eq("id", payload.new.user_id).single()
+            .then(({ data }) => {
+              if (data?.full_name) onUpdateNameCache?.({ [data.id]: data.full_name });
+              if (data?.avatar_url) onUpdateAvatarCache?.({ [data.id]: data.avatar_url });
+            });
         }
       })
       .subscribe();
@@ -158,8 +165,11 @@ export default function Chat({ event, user, myName, onBack, onViewProfile, nameC
               )}
               <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isMe ? "row-reverse" : "row", width: "100%" }}>
                 {!isMe && (
-                  <div onClick={() => isLastInGroup && onViewProfile?.(msg.user_id)} style={{ width: 28, height: isLastInGroup ? 28 : 0, borderRadius: "50%", background: isLastInGroup ? event.color + "55" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, cursor: isLastInGroup ? "pointer" : "default" }}>
-                    {isLastInGroup ? (nameCache[msg.user_id] || msg.user_name)?.[0]?.toUpperCase() : ""}
+                  <div onClick={() => isLastInGroup && onViewProfile?.(msg.user_id)} style={{ width: 28, height: isLastInGroup ? 28 : 0, borderRadius: "50%", background: isLastInGroup ? (avatarCache[msg.user_id] ? "transparent" : event.color + "55") : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, cursor: isLastInGroup ? "pointer" : "default", overflow: "hidden" }}>
+                    {isLastInGroup && (avatarCache[msg.user_id]
+                      ? <img src={avatarCache[msg.user_id]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : (nameCache[msg.user_id] || msg.user_name)?.[0]?.toUpperCase()
+                    )}
                   </div>
                 )}
                 <div style={{

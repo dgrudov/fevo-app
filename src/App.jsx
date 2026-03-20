@@ -1464,7 +1464,7 @@ export default function App() {
           setChatReturnScreen("event");
           if (ret === "notifications") navigateTo("notifications");
           else navigateTo("event", { event: selectedEvent });
-        }} onViewProfile={(userId) => { setProfileViewReturn("chat"); navigateTo("profileView", { user: { id: userId } }); }} nameCache={nameCache} onUpdateNameCache={(updates) => setNameCache(prev => ({ ...prev, ...updates }))} />
+        }} onViewProfile={(userId) => { setProfileViewReturn("chat"); navigateTo("profileView", { user: { id: userId } }); }} nameCache={nameCache} onUpdateNameCache={(updates) => setNameCache(prev => ({ ...prev, ...updates }))} avatarCache={avatarCache} onUpdateAvatarCache={(updates) => setAvatarCache(prev => ({ ...prev, ...updates }))} />
       )}
 
       {(screen === "profile" || screen === "profileView") && (
