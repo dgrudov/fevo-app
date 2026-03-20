@@ -97,7 +97,8 @@ export default function App() {
   const pendingEventRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [avatarCache, setAvatarCache] = useState({});
-  const [nameCache, setNameCache] = useState({});
+  const [nameCache, setNameCache] = useState(() => { try { const c = sessionStorage.getItem("nc"); return c ? JSON.parse(c) : {}; } catch { return {}; } });
+  const nameCacheRef = useRef(nameCache);
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -203,6 +204,7 @@ export default function App() {
   const profileViewReturnRef = useRef(profileViewReturn);
   useEffect(() => { screenRef.current = screen; }, [screen]);
   useEffect(() => { profileViewReturnRef.current = profileViewReturn; }, [profileViewReturn]);
+  useEffect(() => { nameCacheRef.current = nameCache; try { sessionStorage.setItem("nc", JSON.stringify(nameCache)); } catch {} }, [nameCache]);
 
   const handleBack = () => {
     const current = screenRef.current;
@@ -298,11 +300,19 @@ export default function App() {
         if (isNaN(parsed.getTime())) return true;
         return parsed > new Date();
       });
-      setEvents(activeEvents);
+      // Immediately enrich with any cached names to avoid flash of old names
+      const enrichWithCache = (evs, nameMap) => evs.map(e => ({
+        ...e,
+        host: nameMap[e.hostId] || e.host,
+        memberNames: (e.members || []).map((id, i) => nameMap[id] || e.memberNames?.[i] || ""),
+      }));
+      const initialEnriched = enrichWithCache(activeEvents, nameCacheRef.current);
+      setEvents(initialEnriched);
+      setSelectedEvent(prev => prev ? (enrichWithCache([prev], nameCacheRef.current)[0]) : prev);
       setEventsLoading(false);
       if (pendingEventRef.current) {
         const target = formatted.find(e => String(e.id) === String(pendingEventRef.current));
-        if (target) { navigateTo("event", { event: target }); }
+        if (target) { navigateTo("event", { event: enrichWithCache([target], nameCacheRef.current)[0] }); }
         pendingEventRef.current = null;
       }
       const allIds = [...new Set([
@@ -310,11 +320,18 @@ export default function App() {
         ...(data || []).flatMap(e => e.members || []),
       ].filter(Boolean))];
       if (allIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, avatar_url").in("id", allIds);
+        const { data: profiles } = await supabase.from("profiles").select("id, avatar_url, full_name").in("id", allIds);
         if (profiles) {
-          const cache = {};
-          profiles.forEach(p => { if (p.avatar_url) cache[p.id] = p.avatar_url; });
-          setAvatarCache(prev => ({ ...prev, ...cache }));
+          const avatars = {}, names = {};
+          profiles.forEach(p => {
+            if (p.avatar_url) avatars[p.id] = p.avatar_url;
+            if (p.full_name) names[p.id] = p.full_name;
+          });
+          setAvatarCache(prev => ({ ...prev, ...avatars }));
+          nameCacheRef.current = { ...nameCacheRef.current, ...names };
+          setNameCache(prev => ({ ...prev, ...names }));
+          setEvents(prev => enrichWithCache(prev, names));
+          setSelectedEvent(prev => prev ? enrichWithCache([prev], names)[0] : prev);
         }
       }
     };
@@ -323,22 +340,18 @@ export default function App() {
     const eventsSub = supabase
       .channel("events-updates")
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "events" }, (payload) => {
-        setEvents(prev => prev.map(e => e.id === payload.new.id ? {
+        const cache = nameCacheRef.current;
+        const newMembers = payload.new.members || [];
+        const enriched = (e) => ({
           ...e,
-          host: payload.new.host_name,
-          memberNames: payload.new.member_names || [],
-          members: payload.new.members || [],
+          host: cache[payload.new.host_id] || payload.new.host_name,
+          memberNames: newMembers.map((id, i) => cache[id] || payload.new.member_names?.[i] || ""),
+          members: newMembers,
           groupSize: payload.new.group_size,
           maxSize: payload.new.max_size,
-        } : e));
-        setSelectedEvent(prev => prev?.id === payload.new.id ? {
-          ...prev,
-          host: payload.new.host_name,
-          memberNames: payload.new.member_names || [],
-          members: payload.new.members || [],
-          groupSize: payload.new.group_size,
-          maxSize: payload.new.max_size,
-        } : prev);
+        });
+        setEvents(prev => prev.map(e => e.id === payload.new.id ? enriched(e) : e));
+        setSelectedEvent(prev => prev?.id === payload.new.id ? enriched(prev) : prev);
       })
       .subscribe();
 
@@ -1312,7 +1325,9 @@ export default function App() {
             }
             const { data } = await supabase.from("events").select("*").eq("id", numId).single();
             if (data) {
-              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: data.host_name, hostId: data.host_id, members: data.members || [], memberNames: data.member_names || [] };
+              const nc = nameCacheRef.current;
+              const mems = data.members || [];
+              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: nc[data.host_id] || data.host_name, hostId: data.host_id, members: mems, memberNames: mems.map((id, i) => nc[id] || (data.member_names || [])[i] || "") };
               setShowRating(formatted); navigateTo("explore");
             }
           }}
@@ -1323,7 +1338,9 @@ export default function App() {
             if (found) { navigateTo("chat", { event: found }); return; }
             const { data } = await supabase.from("events").select("*").eq("id", numId).single();
             if (data) {
-              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: data.host_name, hostId: data.host_id, members: data.members || [], memberNames: data.member_names || [] };
+              const nc = nameCacheRef.current;
+              const mems = data.members || [];
+              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: nc[data.host_id] || data.host_name, hostId: data.host_id, members: mems, memberNames: mems.map((id, i) => nc[id] || (data.member_names || [])[i] || "") };
               navigateTo("chat", { event: formatted });
             }
           }}
@@ -1333,7 +1350,9 @@ export default function App() {
             if (found) { navigateTo("event", { event: found }); return; }
             const { data } = await supabase.from("events").select("*").eq("id", numId).single();
             if (data) {
-              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: data.host_name, hostId: data.host_id, members: data.members || [], memberNames: data.member_names || [] };
+              const nc = nameCacheRef.current;
+              const mems = data.members || [];
+              const formatted = { ...data, groupSize: data.group_size, maxSize: data.max_size, host: nc[data.host_id] || data.host_name, hostId: data.host_id, members: mems, memberNames: mems.map((id, i) => nc[id] || (data.member_names || [])[i] || "") };
               navigateTo("event", { event: formatted });
             }
           }}
@@ -1446,7 +1465,7 @@ export default function App() {
       )}
 
       {(screen === "profile" || screen === "profileView") && (
-        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} myUsername={myUsername} setMyUsername={setMyUsername} setMyInterests={setMyInterests} joined={joined} events={events} setEvents={setEvents} selectedEvent={selectedEvent} setSelectedEvent={setSelectedEvent} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} onNavigateEvent={(event) => { setProfileViewReturn("profile"); navigateTo("event", { event }); }} />
+        <ProfileScreen key={screen === "profileView" ? viewingUser?.id : user?.id} user={screen === "profileView" && viewingUser ? viewingUser : { id: user?.id, name: myName }} isMe={screen === "profile"} onBack={() => navigateTo(screen === "profileView" ? profileViewReturn : "explore")} myName={myName} setMyName={setMyName} myUsername={myUsername} setMyUsername={setMyUsername} setMyInterests={setMyInterests} joined={joined} events={events} setEvents={setEvents} selectedEvent={selectedEvent} setSelectedEvent={setSelectedEvent} setNameCache={setNameCache} blockedIds={blockedIds} onBlock={(id) => setBlockedIds(prev => [...prev, id])} onUnblock={(id) => setBlockedIds(prev => prev.filter(b => b !== id))} onReport={(id) => setReportSheet(id)} currentUserId={user?.id} myBuddyIds={myBuddyIds} onBuddyChange={(id, adding) => setMyBuddyIds(prev => adding ? [...prev, id] : prev.filter(b => b !== id))} onNavigateProfile={(u) => { setProfileViewReturn("profile"); navigateTo("profileView", { user: u }); }} onNavigateEvent={(event) => { setProfileViewReturn("profile"); navigateTo("event", { event }); }} />
       )}
 
       {photoLightbox !== null && eventPhotos[photoLightbox] && (() => {
@@ -1740,7 +1759,7 @@ export default function App() {
   );
 }
 
-function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setMyUsername, setMyInterests, joined, events, setEvents, selectedEvent, setSelectedEvent, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile, onNavigateEvent }) {
+function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setMyUsername, setMyInterests, joined, events, setEvents, selectedEvent, setSelectedEvent, setNameCache, blockedIds = [], onBlock, onUnblock, onReport, currentUserId, myBuddyIds = [], onBuddyChange, onNavigateProfile, onNavigateEvent }) {
   const [profileTab, setProfileTab] = useState("photos");
   const [profile, setProfile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -1800,6 +1819,7 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
     if (editForm.full_name && editForm.full_name !== myName) {
       const newName = editForm.full_name;
       setMyName(newName);
+      setNameCache?.(prev => ({ ...prev, [user.id]: newName }));
       supabase.from("events").update({ host_name: newName }).eq("host_id", user.id);
       setEvents(prev => prev.map(e => {
         let updated = { ...e };
