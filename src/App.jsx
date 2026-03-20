@@ -1024,7 +1024,10 @@ export default function App() {
                 if (!window.confirm("Delete this event? This cannot be undone.")) return;
                 const { error } = await supabase.from("events").delete().eq("id", selectedEvent.id);
                 if (error) { console.error(error); return; }
+                await supabase.from("join_requests").delete().eq("event_id", selectedEvent.id);
+                await supabase.from("notifications").delete().eq("type", "join_request").filter("data->>event_id", "eq", String(selectedEvent.id));
                 setEvents(events.filter(ev => ev.id !== selectedEvent.id));
+                setJoinRequests(prev => prev.filter(r => r.event_id !== selectedEvent.id));
                 setScreen("explore"); setSelectedEvent(null);
                 setToast("Event deleted"); setTimeout(() => setToast(null), 3000);
               }} style={{ flex: 1, padding: "13px 0", borderRadius: 14, fontSize: 14, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
