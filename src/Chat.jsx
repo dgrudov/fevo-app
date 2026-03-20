@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 
-export default function Chat({ event, user, myName, onBack }) {
+export default function Chat({ event, user, myName, onBack, onViewProfile, nameCache = {}, onUpdateNameCache }) {
   const [messages, setMessages] = useState([]);
-  const [nameMap, setNameMap] = useState({});
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [vpTop, setVpTop] = useState(0);
@@ -37,9 +36,9 @@ export default function Chat({ event, user, myName, onBack }) {
       if (userIds.length > 0) {
         const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
         if (profiles) {
-          const map = {};
-          profiles.forEach(p => { if (p.full_name) map[p.id] = p.full_name; });
-          setNameMap(map);
+          const updates = {};
+          profiles.forEach(p => { if (p.full_name) updates[p.id] = p.full_name; });
+          onUpdateNameCache?.(updates);
         }
       }
     };
@@ -56,19 +55,17 @@ export default function Chat({ event, user, myName, onBack }) {
           return [...prev, payload.new];
         });
         // Fetch name for new sender if not cached
-        setNameMap(prev => {
-          if (prev[payload.new.user_id]) return prev;
+        if (!nameCache[payload.new.user_id]) {
           supabase.from("profiles").select("id, full_name").eq("id", payload.new.user_id).single()
-            .then(({ data }) => { if (data?.full_name) setNameMap(p => ({ ...p, [data.id]: data.full_name })); });
-          return prev;
-        });
+            .then(({ data }) => { if (data?.full_name) onUpdateNameCache?.({ [data.id]: data.full_name }); });
+        }
       })
       .subscribe();
 
     const profilesSub = supabase
       .channel(`chat-profiles-${event.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
-        if (payload.new.full_name) setNameMap(prev => ({ ...prev, [payload.new.id]: payload.new.full_name }));
+        if (payload.new.full_name) onUpdateNameCache?.({ [payload.new.id]: payload.new.full_name });
       })
       .subscribe();
 
@@ -157,12 +154,12 @@ export default function Chat({ event, user, myName, onBack }) {
           return (
             <div key={msg.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
               {showName && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 4, marginLeft: 36 }}>{nameMap[msg.user_id] || msg.user_name}</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 4, marginLeft: 36 }}>{nameCache[msg.user_id] || msg.user_name}</div>
               )}
               <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexDirection: isMe ? "row-reverse" : "row", width: "100%" }}>
                 {!isMe && (
-                  <div style={{ width: 28, height: isLastInGroup ? 28 : 0, borderRadius: "50%", background: isLastInGroup ? event.color + "55" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                    {isLastInGroup ? (nameMap[msg.user_id] || msg.user_name)?.[0]?.toUpperCase() : ""}
+                  <div onClick={() => isLastInGroup && onViewProfile?.(msg.user_id)} style={{ width: 28, height: isLastInGroup ? 28 : 0, borderRadius: "50%", background: isLastInGroup ? event.color + "55" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, cursor: isLastInGroup ? "pointer" : "default" }}>
+                    {isLastInGroup ? (nameCache[msg.user_id] || msg.user_name)?.[0]?.toUpperCase() : ""}
                   </div>
                 )}
                 <div style={{

@@ -97,6 +97,7 @@ export default function App() {
   const pendingEventRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [avatarCache, setAvatarCache] = useState({});
+  const [nameCache, setNameCache] = useState({});
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -1441,7 +1442,7 @@ export default function App() {
           setChatReturnScreen("event");
           if (ret === "notifications") navigateTo("notifications");
           else navigateTo("event", { event: selectedEvent });
-        }} />
+        }} onViewProfile={(userId) => { setProfileViewReturn("chat"); navigateTo("profileView", { user: { id: userId } }); }} nameCache={nameCache} onUpdateNameCache={(updates) => setNameCache(prev => ({ ...prev, ...updates }))} />
       )}
 
       {(screen === "profile" || screen === "profileView") && (
