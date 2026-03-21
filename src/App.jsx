@@ -240,7 +240,7 @@ export default function App() {
         subscribeToPush(session.user.id);
         supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender, email").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
-            if (!data) return;
+            if (!data) { setShowOnboarding(true); return; }
             if (data.banned === true) { setIsBanned(true); return; }
             setMyName(data.full_name || "");
             setMyUsername(data.username || "");

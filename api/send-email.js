@@ -44,13 +44,16 @@ export default async function handler(req, res) {
   try {
     // Create profile server-side using service role (bypasses RLS)
     if (userId && name) {
+      // Use userId suffix on username to prevent unique constraint conflicts
+      const baseUsername = name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9_]/g, '');
+      const username = baseUsername + '_' + userId.substring(0, 6);
       await supabase.from('profiles').upsert({
         id: userId,
         full_name: name,
         email: email,
-        username: name.toLowerCase().replace(/\s+/g, ''),
+        username,
         onboarded: false,
-      }, { onConflict: 'id', ignoreDuplicates: true });
+      }, { onConflict: 'id' });
     }
 
     // Send welcome email via Resend
