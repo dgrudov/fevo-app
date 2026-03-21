@@ -53,6 +53,16 @@ export default async function handler(req, res) {
     const confirmUrl = data.properties?.action_link;
     if (!confirmUrl) return res.status(500).json({ error: 'Could not generate confirmation link' });
 
+    // Upsert profile using service role (bypasses RLS — fixes case where client-side insert failed)
+    if (data.user?.id && name) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        full_name: name,
+        email: email,
+        username: name.toLowerCase().replace(/\s+/g, ''),
+      }, { onConflict: 'id', ignoreDuplicates: true });
+    }
+
     // Send via Resend API
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',

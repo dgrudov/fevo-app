@@ -38,11 +38,17 @@ export default function Auth({ onLogin }) {
       if (!data.session) {
         // Email confirmation required — send via our Resend API and show confirmation screen
         const apiBase = window.Capacitor ? "https://gruvio.app" : "";
-        fetch(`${apiBase}/api/send-email`, {
+        const emailRes = await fetch(`${apiBase}/api/send-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, name }),
-        }).catch(() => {});
+        }).catch(err => ({ ok: false, _err: err.message }));
+        if (emailRes && !emailRes.ok) {
+          const body = await emailRes.json?.().catch(() => ({}));
+          setError(`Could not send confirmation email: ${body?.error || "unknown error"}`);
+          setLoading(false);
+          return;
+        }
         setConfirmationEmail(email);
         setConfirmationSent(true);
         setLoading(false);
