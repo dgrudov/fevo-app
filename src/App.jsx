@@ -266,7 +266,15 @@ export default function App() {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
-      if (_event === "SIGNED_IN" || _event === "INITIAL_SESSION") return;
+      if (_event === "INITIAL_SESSION") return;
+      if (_event === "SIGNED_IN") {
+        // Only act on SIGNED_IN when it comes from an email confirmation link (hash token)
+        // Ignore it during normal signup (signOut is called right after signUp)
+        if (window.location.hash.includes("access_token") && session && !initialAuthHandledRef.current) {
+          loadProfileFromSession(session);
+        }
+        return;
+      }
       if (_event === "SIGNED_OUT") {
         setUser(null);
         setMyInterests([]);
