@@ -265,7 +265,10 @@ export default function App() {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
-      if (_event === "SIGNED_IN" || _event === "INITIAL_SESSION") return; // handled by getSession on mount and onLogin callback
+      if (_event === "SIGNED_IN" || _event === "INITIAL_SESSION") {
+        if (!initialAuthHandledRef.current && session) loadProfileFromSession(session);
+        return;
+      }
       if (_event === "SIGNED_OUT") {
         setUser(null);
         setMyInterests([]);
@@ -660,6 +663,7 @@ export default function App() {
   );
 
   if (!user) return <Auth onLogin={async (u, name, isNewUser, banned) => {
+    initialAuthHandledRef.current = true;
     setProfileLoading(true);
     setIsBanned(false);
     setMyInterests([]);
