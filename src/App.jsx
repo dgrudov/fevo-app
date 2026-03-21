@@ -237,6 +237,7 @@ export default function App() {
     // New signups are handled by the onLogin callback from Auth
     const loadProfileFromSession = (session) => {
       initialAuthHandledRef.current = true;
+      localStorage.removeItem("pendingConfirmation");
       setUser(session.user);
       subscribeToPush(session.user.id);
       supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender, email").eq("id", session.user.id).maybeSingle()

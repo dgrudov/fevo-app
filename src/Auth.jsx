@@ -13,8 +13,9 @@ export default function Auth({ onLogin }) {
   const [confirmationSent, setConfirmationSent] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
 
-  // Restore confirmation screen state on refresh
+  // Restore confirmation screen on refresh, but not when email link was clicked
   useEffect(() => {
+    if (window.location.hash.includes("access_token")) return; // email link — let getSession handle it
     const pending = localStorage.getItem("pendingConfirmation");
     if (pending) { setConfirmationEmail(pending); setConfirmationSent(true); }
   }, []);
