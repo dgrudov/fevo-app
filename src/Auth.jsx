@@ -53,8 +53,15 @@ export default function Auth({ onLogin }) {
           onboarded: false,
         }).catch(() => {});
       }
-      setConfirmationEmail(email);
-      setConfirmationSent(true);
+      if (data.session) {
+        // Email confirmation is disabled — user is already logged in, go straight to onboarding
+        const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single();
+        onLogin(data.user, profile?.full_name || "", true);
+      } else {
+        // Email confirmation required — show confirmation screen
+        setConfirmationEmail(email);
+        setConfirmationSent(true);
+      }
       setLoading(false);
     }
   };
