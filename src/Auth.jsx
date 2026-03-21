@@ -43,6 +43,7 @@ export default function Auth({ onLogin }) {
         await supabase.from("profiles").insert({
           id: data.user.id, full_name: name, email: data.user.email,
           username: name.toLowerCase().replace(/\s+/g, ""),
+          onboarded: false,
         }).catch(() => {});
       }
       setConfirmationEmail(email);

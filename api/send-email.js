@@ -49,6 +49,7 @@ export default async function handler(req, res) {
         full_name: name,
         email: email,
         username: name.toLowerCase().replace(/\s+/g, ''),
+        onboarded: false,
       }, { onConflict: 'id', ignoreDuplicates: true });
     }
 
