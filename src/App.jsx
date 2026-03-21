@@ -257,16 +257,16 @@ export default function App() {
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      if (session && !initialAuthHandledRef.current) {
         loadProfileFromSession(session);
-      } else {
+      } else if (!initialAuthHandledRef.current) {
         setAuthReady(true);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
-      if (_event === "SIGNED_IN") {
-        // Handle magic link logins where getSession ran before the token was exchanged
+      if (_event === "SIGNED_IN" || _event === "INITIAL_SESSION") {
+        // Handle magic link logins where getSession ran before the token was processed
         if (!initialAuthHandledRef.current && session) {
           loadProfileFromSession(session);
         }
