@@ -236,29 +236,58 @@ export default function App() {
     // New signups are handled by the onLogin callback from Auth
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        setUser(session.user);
         subscribeToPush(session.user.id);
         supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender, email").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
-            if (!data) return;
-            if (data.banned === true) { setIsBanned(true); return; }
+            if (!data) {
+              // No profile yet — send to onboarding
+              setShowOnboarding(true);
+              setUser(session.user);
+              setAuthReady(true);
+              return;
+            }
+            if (data.banned === true) { setIsBanned(true); setUser(session.user); setAuthReady(true); return; }
             setMyName(data.full_name || "");
             setMyUsername(data.username || "");
             setMyInterests(data.interests || []);
             setMyGender(data.gender || "");
-            // Backfill email for users who signed up before email was stored
             if (!data.email && session.user.email) {
               supabase.from("profiles").update({ email: session.user.email }).eq("id", session.user.id);
             }
             if (!data.onboarded) setShowOnboarding(true);
             if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
+            setUser(session.user);
+            setAuthReady(true);
           });
+      } else {
+        setAuthReady(true);
       }
-      setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
-      if (_event === "SIGNED_IN") return; // handled by onLogin callback after profile check
+      if (_event === "SIGNED_IN") {
+        // Only act if this is an email-confirmation redirect (user not yet in state)
+        // Normal logins are handled by the onLogin callback in Auth
+        if (session?.user) {
+          setUser(curr => {
+            if (curr) return curr; // already logged in, ignore
+            // Email confirmation — load profile then set user
+            supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, gender, email").eq("id", session.user.id).maybeSingle()
+              .then(({ data }) => {
+                if (!data) return;
+                if (data.banned === true) { setIsBanned(true); return; }
+                setMyName(data.full_name || "");
+                setMyUsername(data.username || "");
+                setMyInterests(data.interests || []);
+                setMyGender(data.gender || "");
+                if (!data.onboarded) setShowOnboarding(true);
+                if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
+              });
+            return session.user;
+          });
+        }
+        return;
+      }
       if (_event === "SIGNED_OUT") {
         setUser(null);
         setMyInterests([]);

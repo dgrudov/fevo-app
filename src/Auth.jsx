@@ -10,6 +10,8 @@ export default function Auth({ onLogin }) {
   const [error, setError] = useState(null);
   const [resetSent, setResetSent] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState("");
 
   const handleForgotPassword = async () => {
     if (!email) { setError("Enter your email address first"); return; }
@@ -33,6 +35,13 @@ export default function Auth({ onLogin }) {
         id: data.user.id, full_name: name, email: data.user.email,
         username: name.toLowerCase().replace(/\s+/g, ""),
       });
+      if (!data.session) {
+        // Email confirmation required — show "check your email" screen
+        setConfirmationEmail(email);
+        setConfirmationSent(true);
+        setLoading(false);
+        return;
+      }
       onLogin(data.user, name, true);
     }
     setLoading(false);
@@ -42,7 +51,15 @@ export default function Auth({ onLogin }) {
     if (!email || !password) { setError("Please fill in all fields"); return; }
     setLoading(true); setError(null);
     const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-    if (loginError) { setError(loginError.message); setLoading(false); return; }
+    if (loginError) {
+      if (loginError.message?.toLowerCase().includes("email not confirmed")) {
+        setConfirmationEmail(email);
+        setConfirmationSent(true);
+        setLoading(false);
+        return;
+      }
+      setError(loginError.message); setLoading(false); return;
+    }
     if (data.user) {
       const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single();
       if (profile?.banned === true) {
@@ -58,6 +75,49 @@ export default function Auth({ onLogin }) {
     }
     setLoading(false);
   };
+
+  if (confirmationSent) return (
+    <div style={{
+      minHeight: "100vh", background: "#0a0805",
+      fontFamily: "'DM Sans', sans-serif",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      padding: "0 24px", position: "relative", overflow: "hidden",
+    }}>
+      <div style={{ position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)", width: 500, height: 400, background: "radial-gradient(ellipse, rgba(255,87,51,0.08), transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ textAlign: "center", marginBottom: 40 }}>
+        <h1 style={{ fontFamily: "'Clash Display', Georgia, serif", fontSize: 52, fontWeight: 700, letterSpacing: -2, color: "#fff", filter: "drop-shadow(0 0 30px rgba(255,87,51,0.4))", marginBottom: 10 }}>Gruvio</h1>
+      </div>
+      <div style={{ width: "100%", maxWidth: 400, background: "#161009", borderRadius: 24, padding: 32, border: "1px solid rgba(255,255,255,0.06)", textAlign: "center" }}>
+        <div style={{ fontSize: 56, marginBottom: 20 }}>📧</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 10 }}>Check your email</h2>
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, marginBottom: 6 }}>
+          We sent a confirmation link to
+        </p>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "#ff8c42", marginBottom: 24, wordBreak: "break-all" }}>{confirmationEmail}</p>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.6, marginBottom: 28 }}>
+          Click the link in the email to activate your account. Check your spam folder if you don't see it.
+        </p>
+        <button
+          onClick={async () => {
+            setLoading(true);
+            const redirectTo = window.Capacitor ? "https://gruvio.app" : window.location.origin;
+            await supabase.auth.resend({ type: "signup", email: confirmationEmail, options: { emailRedirectTo: redirectTo } });
+            setLoading(false);
+          }}
+          disabled={loading}
+          style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(255,87,51,0.25)", cursor: loading ? "not-allowed" : "pointer", background: loading ? "#221c14" : "rgba(255,87,51,0.15)", color: loading ? "rgba(255,255,255,0.3)" : "#ff5733", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}
+        >
+          {loading ? "Sending..." : "Resend confirmation email"}
+        </button>
+        <button
+          onClick={() => { setConfirmationSent(false); setMode("login"); }}
+          style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+        >
+          Back to login
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{
