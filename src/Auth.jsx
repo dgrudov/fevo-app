@@ -28,6 +28,7 @@ export default function Auth({ onLogin }) {
     if (!ageConfirmed) { setError("You must be at least 16 years old to use Gruvio"); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true); setError(null);
+    await supabase.auth.signOut();
     const { data, error: signupError } = await supabase.auth.signUp({ email, password });
     if (signupError) { setError(signupError.message); setLoading(false); return; }
     if (data.user) {
