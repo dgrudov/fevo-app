@@ -236,17 +236,12 @@ export default function App() {
     // New signups are handled by the onLogin callback from Auth
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        setUser(session.user);
         subscribeToPush(session.user.id);
         supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender, email").eq("id", session.user.id).maybeSingle()
           .then(({ data }) => {
-            if (!data) {
-              // No profile yet — send to onboarding
-              setShowOnboarding(true);
-              setUser(session.user);
-              setAuthReady(true);
-              return;
-            }
-            if (data.banned === true) { setIsBanned(true); setUser(session.user); setAuthReady(true); return; }
+            if (!data) return;
+            if (data.banned === true) { setIsBanned(true); return; }
             setMyName(data.full_name || "");
             setMyUsername(data.username || "");
             setMyInterests(data.interests || []);
@@ -256,12 +251,9 @@ export default function App() {
             }
             if (!data.onboarded) setShowOnboarding(true);
             if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
-            setUser(session.user);
-            setAuthReady(true);
           });
-      } else {
-        setAuthReady(true);
       }
+      setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
