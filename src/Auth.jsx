@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
 export default function Auth({ onLogin }) {
@@ -12,6 +12,28 @@ export default function Auth({ onLogin }) {
   const [rememberMe, setRememberMe] = useState(true);
   const [confirmationSent, setConfirmationSent] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
+
+  // Restore confirmation screen state on refresh
+  useEffect(() => {
+    const pending = localStorage.getItem("pendingConfirmation");
+    if (pending) { setConfirmationEmail(pending); setConfirmationSent(true); }
+  }, []);
+
+  // Handle email link click in the same tab (URL hash changes)
+  useEffect(() => {
+    if (!confirmationSent) return;
+    const handleHash = async () => {
+      if (!window.location.hash.includes("access_token")) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        localStorage.removeItem("pendingConfirmation");
+        const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+        onLogin(session.user, profile?.full_name || "", !profile?.onboarded);
+      }
+    };
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, [confirmationSent]);
 
   const handleForgotPassword = async () => {
     if (!email) { setError("Enter your email address first"); return; }
@@ -53,8 +75,8 @@ export default function Auth({ onLogin }) {
           onboarded: false,
         }).catch(() => {});
       }
-      // Sign out to clear any implicit-flow session so refresh doesn't bypass confirmation
       await supabase.auth.signOut();
+      localStorage.setItem("pendingConfirmation", email);
       setConfirmationEmail(email);
       setConfirmationSent(true);
       setLoading(false);
@@ -85,6 +107,7 @@ export default function Auth({ onLogin }) {
       if (!profile?.email && data.user.email) {
         supabase.from("profiles").update({ email: data.user.email }).eq("id", data.user.id);
       }
+      localStorage.removeItem("pendingConfirmation");
       onLogin(data.user, profile?.full_name || "", !profile?.onboarded);
     }
     setLoading(false);
@@ -111,32 +134,6 @@ export default function Auth({ onLogin }) {
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", lineHeight: 1.6, marginBottom: 28 }}>
           Click the link in the email to activate your account. Check your spam folder if you don't see it.
         </p>
-        {error && (
-          <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#ef4444", marginBottom: 16, textAlign: "left" }}>
-            {error}
-          </div>
-        )}
-        <button
-          onClick={async () => {
-            setLoading(true); setError(null);
-            const { data, error: loginError } = await supabase.auth.signInWithPassword({ email: confirmationEmail, password });
-            if (loginError) {
-              setError(loginError.message?.toLowerCase().includes("email not confirmed")
-                ? "Please click the confirmation link in your email first."
-                : loginError.message);
-              setLoading(false); return;
-            }
-            if (data.user) {
-              const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single();
-              onLogin(data.user, profile?.full_name || "", !profile?.onboarded);
-            }
-            setLoading(false);
-          }}
-          disabled={loading}
-          style={{ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: loading ? "not-allowed" : "pointer", background: loading ? "#221c14" : "linear-gradient(135deg, #ff5733, #ff8c42)", color: loading ? "rgba(255,255,255,0.35)" : "#fff", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", marginBottom: 12, boxShadow: loading ? "none" : "0 8px 24px rgba(255,87,51,0.35)" }}
-        >
-          {loading ? "Please wait..." : "I've confirmed my email →"}
-        </button>
         <button
           onClick={async () => {
             setLoading(true);
@@ -149,12 +146,12 @@ export default function Auth({ onLogin }) {
             setLoading(false);
           }}
           disabled={loading}
-          style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(255,87,51,0.25)", cursor: loading ? "not-allowed" : "pointer", background: "rgba(255,87,51,0.08)", color: "rgba(255,87,51,0.7)", fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}
+          style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(255,87,51,0.25)", cursor: loading ? "not-allowed" : "pointer", background: loading ? "#221c14" : "rgba(255,87,51,0.15)", color: loading ? "rgba(255,255,255,0.3)" : "#ff5733", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", marginBottom: 12 }}
         >
-          Resend confirmation email
+          {loading ? "Sending..." : "Resend confirmation email"}
         </button>
         <button
-          onClick={() => { setConfirmationSent(false); setError(null); setMode("login"); }}
+          onClick={() => { localStorage.removeItem("pendingConfirmation"); setConfirmationSent(false); setMode("login"); }}
           style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
         >
           Back to login
