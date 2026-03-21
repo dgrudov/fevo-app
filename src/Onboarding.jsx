@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 const COUNTRY_CODES = [
   { code: "+359", flag: "🇧🇬", name: "Bulgaria" },
@@ -221,8 +222,13 @@ export default function Onboarding({ onFinish }) {
   const handlePhoneChange = (val) => {
     const clean = val.replace(/[^\d+\s\-()]/g, "");
     setPhone(clean);
-    if (clean.length > 0 && clean.replace(/\D/g, "").length < 7) setPhoneError("Enter a valid phone number");
-    else setPhoneError("");
+    if (clean.length > 0) {
+      const full = countryCode.code + clean.replace(/\D/g, "");
+      const valid = (() => { try { return isValidPhoneNumber(full); } catch { return false; } })();
+      setPhoneError(valid ? "" : "Enter a valid phone number");
+    } else {
+      setPhoneError("");
+    }
   };
 
   const profileValid = name.trim().length >= 2 && username.length >= 3 && !usernameError && birthday && gender && phone.replace(/\D/g, "").length >= 7 && !phoneError;
