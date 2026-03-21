@@ -366,7 +366,14 @@ export default function App() {
       const now = new Date();
       const passedEvents = allEvents
         .map(e => ({ ...e, members: e.members || [], memberNames: e.member_names || [] }))
-        .filter(e => e.time && e.time !== "TBD" && new Date(e.time) < now && e.members.includes(user.id) && e.members.length > 1);
+        .filter(e => {
+          if (!e.time || e.time === "TBD") return false;
+          if (!e.members.includes(user.id) || e.members.length <= 1) return false;
+          const end = e.end_time ? new Date(e.end_time) : null;
+          if (end) return end < now;
+          // No end time — wait at least 3 hours after start before prompting
+          return new Date(new Date(e.time).getTime() + 3 * 60 * 60 * 1000) < now;
+        });
       for (const event of passedEvents) {
         // Auto-insert attendance for all members (showed_up=true by default, host can correct later)
         const rows = (event.members || []).map(uid => ({ event_id: event.id, user_id: uid, showed_up: true }));
@@ -2279,9 +2286,11 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
             ...myEvents.map(e => ({ ...e, role: "hosted" })),
             ...joinedEvents.map(e => ({ ...e, role: "joined" })),
           ].sort((a, b) => new Date(b.time) - new Date(a.time));
-          const getEndTime = (e) => e.endTime ? new Date(e.endTime) : (e.time && e.time !== "TBD" ? new Date(e.time) : null);
-          const upcomingEvents = allEvents.filter(e => { const et = getEndTime(e); return et ? et >= now : true; });
-          const pastEvents = allEvents.filter(e => { const et = getEndTime(e); return et ? et < now : false; });
+          const startTime = (e) => e.time && e.time !== "TBD" ? new Date(e.time) : null;
+          const endTime = (e) => e.endTime ? new Date(e.endTime) : null;
+          const upcomingEvents = allEvents.filter(e => { const st = startTime(e); return st ? st >= now : true; });
+          const ongoingEvents = allEvents.filter(e => { const st = startTime(e); const et = endTime(e); return st && st < now && (et ? et >= now : true); });
+          const pastEvents = allEvents.filter(e => { const et = endTime(e); return et ? et < now : false; });
 
           const EventRow = ({ e }) => (
             <div className="card shadow-sm btn" onClick={() => onNavigateEvent && onNavigateEvent(e)} style={{ padding: 14, marginBottom: 10, display: "flex", gap: 12, alignItems: "center", cursor: "pointer" }}>
@@ -2312,9 +2321,15 @@ function ProfileScreen({ user, isMe, onBack, myName, setMyName, myUsername, setM
                   {upcomingEvents.map((e, i) => <EventRow key={i} e={e} />)}
                 </>
               )}
+              {ongoingEvents.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#fb923c", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10, marginTop: upcomingEvents.length > 0 ? 20 : 0 }}>Ongoing</div>
+                  {ongoingEvents.map((e, i) => <EventRow key={i} e={e} />)}
+                </>
+              )}
               {pastEvents.length > 0 && (
                 <>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10, marginTop: upcomingEvents.length > 0 ? 20 : 0 }}>Past</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 10, marginTop: (upcomingEvents.length > 0 || ongoingEvents.length > 0) ? 20 : 0 }}>Past</div>
                   {pastEvents.map((e, i) => <EventRow key={i} e={e} />)}
                 </>
               )}
