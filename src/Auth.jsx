@@ -36,7 +36,13 @@ export default function Auth({ onLogin }) {
         username: name.toLowerCase().replace(/\s+/g, ""),
       });
       if (!data.session) {
-        // Email confirmation required — show "check your email" screen
+        // Email confirmation required — send via our Resend API and show confirmation screen
+        const apiBase = window.Capacitor ? "https://gruvio.app" : "";
+        fetch(`${apiBase}/api/send-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, name }),
+        }).catch(() => {});
         setConfirmationEmail(email);
         setConfirmationSent(true);
         setLoading(false);
@@ -100,8 +106,12 @@ export default function Auth({ onLogin }) {
         <button
           onClick={async () => {
             setLoading(true);
-            const redirectTo = window.Capacitor ? "https://gruvio.app" : window.location.origin;
-            await supabase.auth.resend({ type: "signup", email: confirmationEmail, options: { emailRedirectTo: redirectTo } });
+            const apiBase = window.Capacitor ? "https://gruvio.app" : "";
+            await fetch(`${apiBase}/api/send-email`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: confirmationEmail }),
+            }).catch(() => {});
             setLoading(false);
           }}
           disabled={loading}
