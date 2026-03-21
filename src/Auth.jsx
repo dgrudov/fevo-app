@@ -53,15 +53,10 @@ export default function Auth({ onLogin }) {
           onboarded: false,
         }).catch(() => {});
       }
-      if (data.session) {
-        // Email confirmation is disabled — user is already logged in, go straight to onboarding
-        const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single();
-        onLogin(data.user, profile?.full_name || "", true);
-      } else {
-        // Email confirmation required — show confirmation screen
-        setConfirmationEmail(email);
-        setConfirmationSent(true);
-      }
+      // Sign out to clear any implicit-flow session so refresh doesn't bypass confirmation
+      await supabase.auth.signOut();
+      setConfirmationEmail(email);
+      setConfirmationSent(true);
       setLoading(false);
     }
   };
