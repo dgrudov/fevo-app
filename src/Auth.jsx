@@ -75,7 +75,7 @@ export default function Auth({ onLogin }) {
       if (!profile?.email && data.user.email) {
         supabase.from("profiles").update({ email: data.user.email }).eq("id", data.user.id);
       }
-      onLogin(data.user, profile?.full_name || "");
+      onLogin(data.user, profile?.full_name || "", !profile?.onboarded);
     }
     setLoading(false);
   };
