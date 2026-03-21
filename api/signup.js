@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const emailHtml = (name) => `
+const emailHtml = (code) => `
 <div style="background:#0a0805;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto">
     <div style="text-align:center;margin-bottom:32px">
@@ -10,17 +10,16 @@ const emailHtml = (name) => `
       <p style="color:rgba(255,255,255,0.4);font-size:14px;margin:6px 0 0">Find your people. Go do things.</p>
     </div>
     <div style="background:#161009;border-radius:24px;padding:36px 32px;border:1px solid rgba(255,255,255,0.07);text-align:center">
-      <div style="font-size:52px;margin-bottom:20px">🎉</div>
-      <h2 style="color:#fff;font-size:24px;font-weight:800;margin:0 0 12px;letter-spacing:-0.5px">Hey ${name}, welcome to Gruvio!</h2>
-      <p style="color:rgba(255,255,255,0.5);font-size:15px;line-height:1.7;margin:0 0 32px">
-        Your account is ready. Click below to open the app and complete your profile.
+      <div style="font-size:52px;margin-bottom:20px">🔐</div>
+      <h2 style="color:#fff;font-size:24px;font-weight:800;margin:0 0 12px;letter-spacing:-0.5px">Your verification code</h2>
+      <p style="color:rgba(255,255,255,0.5);font-size:15px;line-height:1.7;margin:0 0 24px">
+        Enter this code in the app to verify your account:
       </p>
-      <a href="https://gruvio.app"
-        style="display:inline-block;background:linear-gradient(135deg,#ff5733,#ff8c42);color:#fff;text-decoration:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:700;letter-spacing:0.3px;box-shadow:0 8px 24px rgba(255,87,51,0.4)">
-        Open Gruvio →
-      </a>
-      <p style="color:rgba(255,255,255,0.25);font-size:12px;margin:28px 0 0;line-height:1.6">
-        If you didn't sign up for Gruvio, you can safely ignore this email.
+      <div style="background:#0a0805;border-radius:16px;padding:28px 24px;border:1px solid rgba(255,87,51,0.3);margin-bottom:24px;letter-spacing:16px;font-size:44px;font-weight:800;color:#ff5733;font-family:monospace">
+        ${code}
+      </div>
+      <p style="color:rgba(255,255,255,0.25);font-size:12px;margin:0;line-height:1.6">
+        This code expires in 15 minutes. If you didn't sign up for Gruvio, ignore this email.
       </p>
     </div>
     <p style="text-align:center;color:rgba(255,255,255,0.2);font-size:12px;margin-top:24px;line-height:1.6">
@@ -28,6 +27,23 @@ const emailHtml = (name) => `
     </p>
   </div>
 </div>`;
+
+async function sendCodeEmail(email, code) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Gruvio <noreply@gruvio.app>',
+      to: [email],
+      subject: 'Your Gruvio verification code',
+      html: emailHtml(code),
+    }),
+  });
+  if (!res.ok) console.error('Resend error:', await res.json());
+}
 
 export default async function handler(req, res) {
   const origin = req.headers.origin || '';
@@ -38,72 +54,53 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { email, password, name } = req.body;
-  if (!email || !password || !name) return res.status(400).json({ error: 'Missing fields' });
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
 
   try {
-    // Check if user already exists using direct DB lookup (handles soft-deleted accounts)
-    const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const { data: { users } } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const existingUser = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
     if (existingUser) {
-      const isDeleted = !!existingUser.deleted_at;
-      if (!isDeleted) {
-        // Real active user - tell them to log in
+      if (existingUser.deleted_at) {
+        await supabase.auth.admin.deleteUser(existingUser.id);
+      } else {
+        // Check if they have a pending verification code — if so, just resend it
+        const { data: profile } = await supabase.from('profiles').select('verification_code').eq('id', existingUser.id).maybeSingle();
+        if (profile?.verification_code) {
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+          await supabase.from('profiles').update({ verification_code: code, verification_code_expires: expires }).eq('id', existingUser.id);
+          await sendCodeEmail(email, code);
+          return res.status(200).json({ ok: true });
+        }
         return res.status(409).json({ error: 'already_registered' });
       }
-      // Soft-deleted ghost account - hard delete so email can be reused
-      await supabase.auth.admin.deleteUser(existingUser.id);
     }
 
-    // Create user with admin API, auto-confirmed so they can log in immediately
     const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: name },
     });
-
-    if (createErr) {
-      console.error('createUser error:', createErr);
-      return res.status(500).json({ error: createErr.message });
-    }
+    if (createErr) return res.status(500).json({ error: createErr.message });
 
     const userId = newUser.user.id;
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const username = 'user_' + userId.substring(0, 8);
 
-    // Create profile server-side using service role (bypasses RLS)
-    const baseUsername = name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9_]/g, '');
-    const username = baseUsername + '_' + userId.substring(0, 6);
     await supabase.from('profiles').upsert({
       id: userId,
-      full_name: name,
-      email: email,
+      email,
       username,
       onboarded: false,
+      verification_code: code,
+      verification_code_expires: expires,
     }, { onConflict: 'id' });
 
-    // Send welcome email via Resend
-    const emailRes = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Gruvio <noreply@gruvio.app>',
-        to: [email],
-        subject: 'Welcome to Gruvio! 🎉',
-        html: emailHtml(name),
-      }),
-    });
-
-    if (!emailRes.ok) {
-      const err = await emailRes.json();
-      console.error('Resend error:', err);
-      // Don't fail the signup just because email failed
-    }
-
-    return res.status(200).json({ ok: true, userId });
+    await sendCodeEmail(email, code);
+    return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('signup error:', err);
     return res.status(500).json({ error: err.message });
