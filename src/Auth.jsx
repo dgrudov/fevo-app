@@ -28,38 +28,26 @@ export default function Auth({ onLogin }) {
     if (!ageConfirmed) { setError("You must be at least 16 years old to use Gruvio"); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true); setError(null);
-    await supabase.auth.signOut();
-    const { data, error: signupError } = await supabase.auth.signUp({ email, password });
-    if (signupError) {
-      const msg = signupError.message?.toLowerCase() || "";
-      if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already exists")) {
+    const apiBase = window.Capacitor ? "https://gruvio.app" : "";
+    const res = await fetch(`${apiBase}/api/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name, password }),
+    }).catch(() => null);
+    if (!res) { setError("Network error. Please try again."); setLoading(false); return; }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (json.error === "already_registered") {
         setError("An account with this email already exists. Please log in instead.");
         setMode("login");
       } else {
-        setError(signupError.message);
+        setError(json.error || "Something went wrong. Please try again.");
       }
       setLoading(false); return;
     }
-    if (data.user) {
-      // Send confirmation email via our API (handles profile creation server-side too)
-      const apiBase = window.Capacitor ? "https://gruvio.app" : "";
-      const emailRes = await fetch(`${apiBase}/api/send-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, userId: data.user.id }),
-      }).catch(() => null);
-      if (!emailRes || !emailRes.ok) {
-        // Fallback: create profile client-side if server-side failed
-        await supabase.from("profiles").insert({
-          id: data.user.id, full_name: name, email: data.user.email,
-          username: name.toLowerCase().replace(/\s+/g, ""),
-          onboarded: false,
-        }).catch(() => {});
-      }
-      setConfirmationEmail(email);
-      setConfirmationSent(true);
-      setLoading(false);
-    }
+    setConfirmationEmail(email);
+    setConfirmationSent(true);
+    setLoading(false);
   };
 
   const handleLogin = async () => {
