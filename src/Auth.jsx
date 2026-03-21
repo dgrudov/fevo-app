@@ -30,7 +30,16 @@ export default function Auth({ onLogin }) {
     setLoading(true); setError(null);
     await supabase.auth.signOut();
     const { data, error: signupError } = await supabase.auth.signUp({ email, password });
-    if (signupError) { setError(signupError.message); setLoading(false); return; }
+    if (signupError) {
+      const msg = signupError.message?.toLowerCase() || "";
+      if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already exists")) {
+        setError("An account with this email already exists. Please log in instead.");
+        setMode("login");
+      } else {
+        setError(signupError.message);
+      }
+      setLoading(false); return;
+    }
     if (data.user) {
       // Send confirmation email via our API (handles profile creation server-side too)
       const apiBase = window.Capacitor ? "https://gruvio.app" : "";
