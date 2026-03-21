@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { App as CapApp } from "@capacitor/app";
-import { supabase } from "./supabase";
+import { supabase, hadAccessToken } from "./supabase";
 import Auth from "./Auth";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -268,9 +268,10 @@ export default function App() {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
       if (_event === "INITIAL_SESSION") return;
       if (_event === "SIGNED_IN") {
-        // Only act on SIGNED_IN when it comes from an email confirmation link (hash token)
-        // Ignore it during normal signup (signOut is called right after signUp)
-        if (window.location.hash.includes("access_token") && session && !initialAuthHandledRef.current) {
+        // Only act on SIGNED_IN when it came from an email confirmation link (hash token).
+        // hadAccessToken is captured before Supabase clears the URL hash, so it's reliable.
+        // During normal signup, signOut() is called right after signUp(), so we ignore that SIGNED_IN.
+        if (hadAccessToken && session && !initialAuthHandledRef.current) {
           loadProfileFromSession(session);
         }
         return;

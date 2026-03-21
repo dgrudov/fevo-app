@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "./supabase";
+import { supabase, hadAccessToken } from "./supabase";
 
 export default function Auth({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -15,7 +15,7 @@ export default function Auth({ onLogin }) {
 
   // Restore confirmation screen on refresh, but not when email link was clicked
   useEffect(() => {
-    if (window.location.hash.includes("access_token")) return; // email link — let getSession handle it
+    if (hadAccessToken) return; // email link — let getSession handle it
     const pending = localStorage.getItem("pendingConfirmation");
     if (pending) { setConfirmationEmail(pending); setConfirmationSent(true); }
   }, []);
