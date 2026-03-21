@@ -45,8 +45,17 @@ export default function Auth({ onLogin }) {
       }
       setLoading(false); return;
     }
-    setConfirmationEmail(email);
-    setConfirmationSent(true);
+    // Account is auto-confirmed server-side — sign in immediately and go to onboarding
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+    if (loginError || !loginData.user) {
+      // Fallback: show "check your email" if auto-login somehow fails
+      setConfirmationEmail(email);
+      setConfirmationSent(true);
+      setLoading(false);
+      return;
+    }
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", loginData.user.id).single();
+    onLogin(loginData.user, profile?.full_name || "", true);
     setLoading(false);
   };
 
