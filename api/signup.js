@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const emailHtml = (name) => `
+const emailHtml = (name, magicLink) => `
 <div style="background:#0a0805;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto">
     <div style="text-align:center;margin-bottom:32px">
@@ -15,7 +15,7 @@ const emailHtml = (name) => `
       <p style="color:rgba(255,255,255,0.5);font-size:15px;line-height:1.7;margin:0 0 32px">
         Your account is ready. Click below to open the app and complete your profile.
       </p>
-      <a href="https://gruvio.app"
+      <a href="${magicLink}"
         style="display:inline-block;background:linear-gradient(135deg,#ff5733,#ff8c42);color:#fff;text-decoration:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:700;letter-spacing:0.3px;box-shadow:0 8px 24px rgba(255,87,51,0.4)">
         Open Gruvio →
       </a>
@@ -56,11 +56,11 @@ export default async function handler(req, res) {
       await supabase.auth.admin.deleteUser(existingUser.id);
     }
 
-    // Create user with admin API (bypasses soft-delete issues)
+    // Create user with admin API, auto-confirmed so they can log in immediately
     const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: false, // Require email confirmation
+      email_confirm: true,
       user_metadata: { full_name: name },
     });
 
@@ -82,6 +82,14 @@ export default async function handler(req, res) {
       onboarded: false,
     }, { onConflict: 'id' });
 
+    // Generate a magic link so clicking the email logs them straight in
+    const { data: linkData } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+      options: { redirectTo: 'https://gruvio.app' },
+    });
+    const magicLink = linkData?.properties?.action_link || 'https://gruvio.app';
+
     // Send welcome email via Resend
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -92,8 +100,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'Gruvio <noreply@gruvio.app>',
         to: [email],
-        subject: 'Welcome to Gruvio!',
-        html: emailHtml(name),
+        subject: 'Welcome to Gruvio! 🎉',
+        html: emailHtml(name, magicLink),
       }),
     });
 

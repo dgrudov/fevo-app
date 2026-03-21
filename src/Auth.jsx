@@ -55,12 +55,6 @@ export default function Auth({ onLogin }) {
     setLoading(true); setError(null);
     const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
     if (loginError) {
-      if (loginError.message?.toLowerCase().includes("email not confirmed")) {
-        setConfirmationEmail(email);
-        setConfirmationSent(true);
-        setLoading(false);
-        return;
-      }
       setError(loginError.message); setLoading(false); return;
     }
     if (data.user) {

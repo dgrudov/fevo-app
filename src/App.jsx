@@ -93,6 +93,7 @@ export default function App() {
   const [showRating, setShowRating] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationSentRef = useRef(false);
+  const initialAuthHandledRef = useRef(false);
   const touchStartX = useRef(0);
   const pendingEventRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
@@ -234,30 +235,43 @@ export default function App() {
   useEffect(() => {
     // Only check banned/onboarded on existing session load (returning users)
     // New signups are handled by the onLogin callback from Auth
+    const loadProfileFromSession = (session) => {
+      initialAuthHandledRef.current = true;
+      setUser(session.user);
+      subscribeToPush(session.user.id);
+      supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender, email").eq("id", session.user.id).maybeSingle()
+        .then(({ data }) => {
+          if (!data) { setShowOnboarding(true); setAuthReady(true); return; }
+          if (data.banned === true) { setIsBanned(true); setAuthReady(true); return; }
+          setMyName(data.full_name || "");
+          setMyUsername(data.username || "");
+          setMyInterests(data.interests || []);
+          setMyGender(data.gender || "");
+          if (!data.email && session.user.email) {
+            supabase.from("profiles").update({ email: session.user.email }).eq("id", session.user.id);
+          }
+          if (!data.onboarded) setShowOnboarding(true);
+          if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
+          setAuthReady(true);
+        });
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        setUser(session.user);
-        subscribeToPush(session.user.id);
-        supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, location, gender, email").eq("id", session.user.id).maybeSingle()
-          .then(({ data }) => {
-            if (!data) { setShowOnboarding(true); return; }
-            if (data.banned === true) { setIsBanned(true); return; }
-            setMyName(data.full_name || "");
-            setMyUsername(data.username || "");
-            setMyInterests(data.interests || []);
-            setMyGender(data.gender || "");
-            if (!data.email && session.user.email) {
-              supabase.from("profiles").update({ email: session.user.email }).eq("id", session.user.id);
-            }
-            if (!data.onboarded) setShowOnboarding(true);
-            if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
-          });
+        loadProfileFromSession(session);
+      } else {
+        setAuthReady(true);
       }
-      setAuthReady(true);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
-      if (_event === "SIGNED_IN") return; // handled by getSession on mount and onLogin callback
+      if (_event === "SIGNED_IN") {
+        // Handle magic link logins where getSession ran before the token was exchanged
+        if (!initialAuthHandledRef.current && session) {
+          loadProfileFromSession(session);
+        }
+        return;
+      }
       if (_event === "SIGNED_OUT") {
         setUser(null);
         setMyInterests([]);
@@ -652,6 +666,7 @@ export default function App() {
   );
 
   if (!user) return <Auth onLogin={async (u, name, isNewUser, banned) => {
+    initialAuthHandledRef.current = true;
     setProfileLoading(true);
     setIsBanned(false);
     setMyInterests([]);
