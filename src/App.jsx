@@ -66,7 +66,7 @@ const ACTIVITY_TYPES = [
 export default function App() {
   const [screen, setScreen] = useState("explore");
   const [events, setEvents] = useState([]);
-  const [filterCat, setFilterCat] = useState("For You");
+  const [filterCat, setFilterCat] = useState("All");
   const [myInterests, setMyInterests] = useState([]);
   const [filterDate, setFilterDate] = useState("all");
   const [filterPickedDate, setFilterPickedDate] = useState(null);
