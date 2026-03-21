@@ -30,7 +30,9 @@ const emailHtml = (name, confirmUrl) => `
 </div>`;
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://gruvio.app');
+  const origin = req.headers.origin || '';
+  const allowed = ['https://gruvio.app', 'http://localhost:3000', 'https://localhost'];
+  res.setHeader('Access-Control-Allow-Origin', allowed.includes(origin) ? origin : 'https://gruvio.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();

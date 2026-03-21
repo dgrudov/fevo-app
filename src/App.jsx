@@ -265,29 +265,7 @@ export default function App() {
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === "PASSWORD_RECOVERY") { setPasswordRecovery(true); return; }
-      if (_event === "SIGNED_IN") {
-        // Only act if this is an email-confirmation redirect (user not yet in state)
-        // Normal logins are handled by the onLogin callback in Auth
-        if (session?.user) {
-          setUser(curr => {
-            if (curr) return curr; // already logged in, ignore
-            // Email confirmation — load profile then set user
-            supabase.from("profiles").select("full_name, username, onboarded, banned, interests, bio, avatar_url, gender, email").eq("id", session.user.id).maybeSingle()
-              .then(({ data }) => {
-                if (!data) return;
-                if (data.banned === true) { setIsBanned(true); return; }
-                setMyName(data.full_name || "");
-                setMyUsername(data.username || "");
-                setMyInterests(data.interests || []);
-                setMyGender(data.gender || "");
-                if (!data.onboarded) setShowOnboarding(true);
-                if (!data.bio || !data.avatar_url) setProfileIncomplete(true);
-              });
-            return session.user;
-          });
-        }
-        return;
-      }
+      if (_event === "SIGNED_IN") return; // handled by getSession on mount and onLogin callback
       if (_event === "SIGNED_OUT") {
         setUser(null);
         setMyInterests([]);
