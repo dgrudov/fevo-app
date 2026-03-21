@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const emailHtml = (name, confirmUrl) => `
-<div style="background:#0a0805;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif;min-height:100vh">
+const emailHtml = (name) => `
+<div style="background:#0a0805;padding:40px 20px;font-family:'Helvetica Neue',Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto">
     <div style="text-align:center;margin-bottom:32px">
       <h1 style="font-size:42px;font-weight:800;color:#fff;letter-spacing:-1.5px;margin:0;text-shadow:0 0 30px rgba(255,87,51,0.5)">Gruvio</h1>
@@ -11,16 +11,16 @@ const emailHtml = (name, confirmUrl) => `
     </div>
     <div style="background:#161009;border-radius:24px;padding:36px 32px;border:1px solid rgba(255,255,255,0.07);text-align:center">
       <div style="font-size:52px;margin-bottom:20px">🎉</div>
-      <h2 style="color:#fff;font-size:24px;font-weight:800;margin:0 0 12px;letter-spacing:-0.5px">Hey ${name}, confirm your account</h2>
+      <h2 style="color:#fff;font-size:24px;font-weight:800;margin:0 0 12px;letter-spacing:-0.5px">Hey ${name}, welcome to Gruvio!</h2>
       <p style="color:rgba(255,255,255,0.5);font-size:15px;line-height:1.7;margin:0 0 32px">
-        You're one step away from finding your squad.<br>Click the button below to activate your Gruvio account.
+        Your account is ready. Click below to open the app and complete your profile.
       </p>
-      <a href="${confirmUrl}"
+      <a href="https://gruvio.app"
         style="display:inline-block;background:linear-gradient(135deg,#ff5733,#ff8c42);color:#fff;text-decoration:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:700;letter-spacing:0.3px;box-shadow:0 8px 24px rgba(255,87,51,0.4)">
-        Confirm my account →
+        Open Gruvio →
       </a>
       <p style="color:rgba(255,255,255,0.25);font-size:12px;margin:28px 0 0;line-height:1.6">
-        This link expires in 24 hours.<br>If you didn't sign up for Gruvio, you can safely ignore this email.
+        If you didn't sign up for Gruvio, you can safely ignore this email.
       </p>
     </div>
     <p style="text-align:center;color:rgba(255,255,255,0.2);font-size:12px;margin-top:24px;line-height:1.6">
@@ -38,32 +38,21 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { email, name } = req.body;
+  const { email, name, userId } = req.body;
   if (!email) return res.status(400).json({ error: 'Missing email' });
 
   try {
-    // Generate Supabase confirmation link via admin API
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'signup',
-      email,
-      options: { redirectTo: 'https://gruvio.app' },
-    });
-    if (error) return res.status(500).json({ error: error.message });
-
-    const confirmUrl = data.properties?.action_link;
-    if (!confirmUrl) return res.status(500).json({ error: 'Could not generate confirmation link' });
-
-    // Upsert profile using service role (bypasses RLS — fixes case where client-side insert failed)
-    if (data.user?.id && name) {
+    // Create profile server-side using service role (bypasses RLS)
+    if (userId && name) {
       await supabase.from('profiles').upsert({
-        id: data.user.id,
+        id: userId,
         full_name: name,
         email: email,
         username: name.toLowerCase().replace(/\s+/g, ''),
       }, { onConflict: 'id', ignoreDuplicates: true });
     }
 
-    // Send via Resend API
+    // Send welcome email via Resend
     const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -73,8 +62,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'Gruvio <noreply@gruvio.app>',
         to: [email],
-        subject: 'Confirm your Gruvio account',
-        html: emailHtml(name || 'there', confirmUrl),
+        subject: 'Welcome to Gruvio!',
+        html: emailHtml(name || 'there'),
       }),
     });
 

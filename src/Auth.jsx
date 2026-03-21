@@ -31,32 +31,24 @@ export default function Auth({ onLogin }) {
     const { data, error: signupError } = await supabase.auth.signUp({ email, password });
     if (signupError) { setError(signupError.message); setLoading(false); return; }
     if (data.user) {
-      await supabase.from("profiles").insert({
-        id: data.user.id, full_name: name, email: data.user.email,
-        username: name.toLowerCase().replace(/\s+/g, ""),
-      });
-      if (!data.session) {
-        // Email confirmation required — send via our Resend API and show confirmation screen
-        const apiBase = window.Capacitor ? "https://gruvio.app" : "";
-        const emailRes = await fetch(`${apiBase}/api/send-email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, name }),
-        }).catch(err => ({ ok: false, _err: err.message }));
-        if (emailRes && !emailRes.ok) {
-          const body = await emailRes.json?.().catch(() => ({}));
-          setError(`Could not send confirmation email: ${body?.error || "unknown error"}`);
-          setLoading(false);
-          return;
-        }
-        setConfirmationEmail(email);
-        setConfirmationSent(true);
-        setLoading(false);
-        return;
+      // Send confirmation email via our API (handles profile creation server-side too)
+      const apiBase = window.Capacitor ? "https://gruvio.app" : "";
+      const emailRes = await fetch(`${apiBase}/api/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, userId: data.user.id }),
+      }).catch(() => null);
+      if (!emailRes || !emailRes.ok) {
+        // Fallback: create profile client-side if server-side failed
+        await supabase.from("profiles").insert({
+          id: data.user.id, full_name: name, email: data.user.email,
+          username: name.toLowerCase().replace(/\s+/g, ""),
+        }).catch(() => {});
       }
-      onLogin(data.user, name, true);
+      setConfirmationEmail(email);
+      setConfirmationSent(true);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleLogin = async () => {
