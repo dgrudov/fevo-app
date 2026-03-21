@@ -14,13 +14,22 @@ export default async function handler(req, res) {
   const { email, code } = req.body;
   if (!email || !code) return res.status(400).json({ error: 'Missing fields' });
 
-  const { data: profile } = await supabase
+  // Find user by email via admin API, then look up profile by ID
+  const { data: { users } } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const user = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+  if (!user) return res.status(404).json({ error: 'Account not found' });
+
+  const { data: profile, error: profileErr } = await supabase
     .from('profiles')
     .select('verification_code, verification_code_expires')
-    .eq('email', email)
+    .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile) return res.status(404).json({ error: 'Account not found' });
+  if (profileErr) {
+    console.error('profile fetch error:', profileErr);
+    return res.status(500).json({ error: 'Database error: ' + profileErr.message });
+  }
+  if (!profile) return res.status(404).json({ error: 'Profile not found' });
   if (!profile.verification_code) return res.status(400).json({ error: 'already_verified' });
   if (profile.verification_code !== code) return res.status(400).json({ error: 'Wrong code. Try again.' });
   if (profile.verification_code_expires && new Date(profile.verification_code_expires) < new Date()) {
@@ -30,7 +39,7 @@ export default async function handler(req, res) {
   await supabase
     .from('profiles')
     .update({ verification_code: null, verification_code_expires: null })
-    .eq('email', email);
+    .eq('id', user.id);
 
   return res.status(200).json({ ok: true });
 }
