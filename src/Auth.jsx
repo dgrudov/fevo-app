@@ -9,6 +9,7 @@ export default function Auth({ onLogin }) {
   const [error, setError] = useState(null);
   const [resetSent, setResetSent] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [confirmationSent, setConfirmationSent] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
 
@@ -61,7 +62,7 @@ export default function Auth({ onLogin }) {
   const handleLogin = async () => {
     if (!email || !password) { setError("Please fill in all fields"); return; }
     setLoading(true); setError(null);
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password, options: { persistSession: rememberMe } });
     if (loginError) {
       if (loginError.message?.toLowerCase().includes("email not confirmed")) {
         setConfirmationEmail(email);
@@ -185,7 +186,13 @@ export default function Auth({ onLogin }) {
           <input className="auth-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" />
 
           {mode === "login" && (
-            <div style={{ textAlign: "right", marginTop: -4 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: -4 }}>
+              <div onClick={() => setRememberMe(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${rememberMe ? "#ff5733" : "rgba(255,255,255,0.2)"}`, background: rememberMe ? "#ff5733" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
+                  {rememberMe && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
+                </div>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>Remember me</span>
+              </div>
               <span onClick={handleForgotPassword} style={{ fontSize: 13, color: "rgba(255,87,51,0.7)", cursor: "pointer", fontWeight: 500 }}>
                 Forgot password?
               </span>
