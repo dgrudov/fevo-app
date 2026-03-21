@@ -5,7 +5,6 @@ export default function Auth({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [resetSent, setResetSent] = useState(false);
@@ -24,7 +23,7 @@ export default function Auth({ onLogin }) {
   };
 
   const handleSignup = async () => {
-    if (!email || !password || !name) { setError("Please fill in all fields"); return; }
+    if (!email || !password) { setError("Please fill in all fields"); return; }
     if (!ageConfirmed) { setError("You must be at least 16 years old to use Gruvio"); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true); setError(null);
@@ -45,12 +44,11 @@ export default function Auth({ onLogin }) {
       const emailRes = await fetch(`${apiBase}/api/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, userId: data.user.id }),
+        body: JSON.stringify({ email, userId: data.user.id }),
       }).catch(() => null);
       if (!emailRes || !emailRes.ok) {
         await supabase.from("profiles").insert({
-          id: data.user.id, full_name: name, email: data.user.email,
-          username: name.toLowerCase().replace(/\s+/g, ""),
+          id: data.user.id, email: data.user.email,
           onboarded: false,
         }).catch(() => {});
       }
@@ -183,9 +181,6 @@ export default function Auth({ onLogin }) {
 
         {/* Fields */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {mode === "signup" && (
-            <input className="auth-input" value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" />
-          )}
           <input className="auth-input" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" type="email" />
           <input className="auth-input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" />
 
