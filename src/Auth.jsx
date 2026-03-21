@@ -28,35 +28,36 @@ export default function Auth({ onLogin }) {
     if (!ageConfirmed) { setError("You must be at least 16 years old to use Gruvio"); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true); setError(null);
-    const apiBase = window.Capacitor ? "https://gruvio.app" : "";
-    const res = await fetch(`${apiBase}/api/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, name, password }),
-    }).catch(() => null);
-    if (!res) { setError("Network error. Please try again."); setLoading(false); return; }
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      if (json.error === "already_registered") {
+    await supabase.auth.signOut();
+    const { data, error: signupError } = await supabase.auth.signUp({ email, password });
+    if (signupError) {
+      const msg = signupError.message?.toLowerCase() || "";
+      if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already exists")) {
         setError("An account with this email already exists. Please log in instead.");
         setMode("login");
       } else {
-        setError(json.error || "Something went wrong. Please try again.");
+        setError(signupError.message);
       }
       setLoading(false); return;
     }
-    // Account is auto-confirmed server-side — sign in immediately and go to onboarding
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-    if (loginError || !loginData.user) {
-      // Fallback: show "check your email" if auto-login somehow fails
+    if (data.user) {
+      const apiBase = window.Capacitor ? "https://gruvio.app" : "";
+      const emailRes = await fetch(`${apiBase}/api/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, userId: data.user.id }),
+      }).catch(() => null);
+      if (!emailRes || !emailRes.ok) {
+        await supabase.from("profiles").insert({
+          id: data.user.id, full_name: name, email: data.user.email,
+          username: name.toLowerCase().replace(/\s+/g, ""),
+          onboarded: false,
+        }).catch(() => {});
+      }
       setConfirmationEmail(email);
       setConfirmationSent(true);
       setLoading(false);
-      return;
     }
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", loginData.user.id).single();
-    onLogin(loginData.user, profile?.full_name || "", true);
-    setLoading(false);
   };
 
   const handleLogin = async () => {
@@ -64,6 +65,12 @@ export default function Auth({ onLogin }) {
     setLoading(true); setError(null);
     const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
     if (loginError) {
+      if (loginError.message?.toLowerCase().includes("email not confirmed")) {
+        setConfirmationEmail(email);
+        setConfirmationSent(true);
+        setLoading(false);
+        return;
+      }
       setError(loginError.message); setLoading(false); return;
     }
     if (data.user) {
